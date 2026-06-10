@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Foxmatter — Stremio Stream Formatter</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:       #0c0c0e;
+    --surface:  #141416;
+    --surface2: #1c1c1f;
+    --border:   #2a2a2e;
+    --accent:   #ff6b35;
+    --accent2:  #ff9a6c;
+    --green:    #4caf50;
+    --text:     #e8e8ea;
+    --muted:    #888;
+    --radius:   10px;
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 40px 16px;
+  }
+
+  .logo { font-size: 2.4rem; margin-bottom: 4px; }
+  h1 { font-size: 1.8rem; font-weight: 700; color: var(--accent); margin-bottom: 6px; }
+  .tagline { color: var(--muted); margin-bottom: 40px; font-size: 0.95rem; }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 32px;
+    width: 100%;
+    max-width: 480px;
+    margin-bottom: 20px;
+  }
+
+  .card h2 { font-size: 1rem; font-weight: 600; margin-bottom: 20px; color: var(--text); }
+
+  label { display: block; font-size: 0.78rem; color: var(--muted); margin-bottom: 5px; margin-top: 14px; }
+  input {
+    width: 100%;
+    padding: 10px 13px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    font-size: 0.95rem;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  input:focus { border-color: var(--accent); }
+
+  .btn {
+    width: 100%;
+    margin-top: 22px;
+    padding: 12px;
+    background: var(--accent);
+    color: #000;
+    border: none;
+    border-radius: 7px;
+    font-size: 0.95rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.15s, opacity 0.15s;
+  }
+  .btn:hover { background: var(--accent2); }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  /* Install card — shown after login */
+  #install-card { display: none; }
+  #install-card h2 { color: var(--green); }
+
+  .install-url-box {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    padding: 12px 14px;
+    font-size: 0.8rem;
+    font-family: monospace;
+    word-break: break-all;
+    color: var(--muted);
+    margin-bottom: 12px;
+    position: relative;
+  }
+
+  .copy-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 6px;
+  }
+  .copy-row code { flex: 1; font-size: 0.75rem; color: var(--muted); word-break: break-all; }
+  .copy-btn {
+    flex-shrink: 0;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 5px;
+    padding: 4px 10px;
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition: background 0.1s;
+  }
+  .copy-btn:hover { background: var(--border); }
+
+  .install-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    padding: 13px;
+    background: var(--green);
+    color: #000;
+    border: none;
+    border-radius: 7px;
+    font-size: 1rem;
+    font-weight: 700;
+    cursor: pointer;
+    text-decoration: none;
+    margin-top: 20px;
+    transition: opacity 0.15s;
+  }
+  .install-btn:hover { opacity: 0.88; }
+
+  .info-row {
+    display: flex;
+    gap: 8px;
+    margin-top: 14px;
+    font-size: 0.78rem;
+    color: var(--muted);
+  }
+  .info-row span { color: var(--green); }
+
+  .error { color: #f44336; font-size: 0.85rem; margin-top: 10px; display: none; }
+  .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid #0006; border-top-color: #000; border-radius: 50%; animation: spin 0.6s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .footer { color: var(--muted); font-size: 0.75rem; margin-top: 24px; text-align: center; }
+  .footer a { color: var(--accent); text-decoration: none; }
+
+  .step-hint {
+    font-size: 0.78rem;
+    color: var(--muted);
+    margin-top: 16px;
+    padding: 10px 14px;
+    background: var(--surface2);
+    border-radius: 6px;
+    border-left: 3px solid var(--accent);
+  }
+</style>
+</head>
+<body>
+
+<div class="logo">🦊</div>
+<h1>Foxmatter</h1>
+<p class="tagline">Format and badge your Stremio streams — one addon, all sources.</p>
+
+<!-- Login card -->
+<div class="card" id="login-card">
+  <h2>Sign in with your Stremio account</h2>
+
+  <label>Email</label>
+  <input type="email" id="email" placeholder="you@example.com" autocomplete="email" />
+
+  <label>Password</label>
+  <input type="password" id="password" placeholder="Stremio password" autocomplete="current-password" />
+
+  <button class="btn" id="login-btn" onclick="doLogin()">Sign in</button>
+  <div class="error" id="login-error"></div>
+
+  <div class="step-hint">
+    Your credentials are used only to authenticate with Stremio. We store only a session token, never your password.
+  </div>
+</div>
+
+<!-- Install card — shown after successful login -->
+<div class="card" id="install-card">
+  <h2>✓ Ready to install</h2>
+
+  <p style="font-size:0.88rem; color:var(--muted); margin-bottom:20px;">
+    Click the button below to open Stremio and install your personal Foxmatter addon.
+    Once installed, <strong style="color:var(--text)">move it to the top of your addon list</strong> in Stremio settings.
+  </p>
+
+  <a id="stremio-install-btn" href="#" class="install-btn">
+    ⚡ Install in Stremio
+  </a>
+
+  <div class="info-row">
+    <div>Your addon URL:</div>
+  </div>
+  <div class="copy-row">
+    <code id="install-url-text"></code>
+    <button class="copy-btn" onclick="copyUrl()">Copy</button>
+  </div>
+
+  <div class="step-hint" style="margin-top:18px;">
+    <strong>Not opening?</strong> Copy the URL above and paste it manually in Stremio →
+    Settings → Addons → "Add addon via URL".
+  </div>
+
+  <button class="btn" style="margin-top:20px; background:var(--surface2); color:var(--text); border:1px solid var(--border);" onclick="doLogout()">
+    Sign out
+  </button>
+</div>
+
+<div class="footer">
+  Foxmatter is open source and self-hostable.<br>
+  Your streams, your rules.
+</div>
+
+<script>
+  // ── State ──────────────────────────────────────────────────────────────
+  let currentToken = localStorage.getItem('fm_token') || null;
+
+  // ── On load: if we have a stored token, try to restore session ─────────
+  window.addEventListener('DOMContentLoaded', async () => {
+    if (currentToken) {
+      const ok = await fetchMe(currentToken);
+      if (!ok) {
+        // Token expired or invalid
+        localStorage.removeItem('fm_token');
+        currentToken = null;
+      }
+    }
+  });
+
+  // ── Login ──────────────────────────────────────────────────────────────
+  async function doLogin() {
+    const email    = document.getElementById('email').value.trim();
+    const password = document.getElementById('password').value;
+    const errEl    = document.getElementById('login-error');
+    const btn      = document.getElementById('login-btn');
+
+    errEl.style.display = 'none';
+
+    if (!email || !password) {
+      showError('Please fill in both fields.');
+      return;
+    }
+
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span> Signing in…';
+
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        showError(data.error || 'Login failed. Check your credentials.');
+        return;
+      }
+
+      currentToken = data.token;
+      localStorage.setItem('fm_token', currentToken);
+      await fetchMe(currentToken);
+
+    } catch (err) {
+      showError('Cannot reach the server. Is Foxmatter running?');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Sign in';
+    }
+  }
+
+  // ── Fetch /api/me and show install card ────────────────────────────────
+  async function fetchMe(token) {
+    try {
+      const res = await fetch('/api/me', {
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+
+      if (!res.ok) return false;
+
+      const me = await res.json();
+      showInstallCard(me);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  function showInstallCard(me) {
+    document.getElementById('login-card').style.display  = 'none';
+    document.getElementById('install-card').style.display = 'block';
+
+    const installUrl   = me.installUrl;
+    const stremioUrl   = me.stremioInstallUrl;
+
+    document.getElementById('stremio-install-btn').href = stremioUrl;
+    document.getElementById('install-url-text').textContent = installUrl;
+  }
+
+  function doLogout() {
+    localStorage.removeItem('fm_token');
+    currentToken = null;
+    document.getElementById('install-card').style.display = 'none';
+    document.getElementById('login-card').style.display   = 'block';
+    document.getElementById('email').value    = '';
+    document.getElementById('password').value = '';
+  }
+
+  function copyUrl() {
+    const url = document.getElementById('install-url-text').textContent;
+    navigator.clipboard.writeText(url).then(() => {
+      const btn = document.querySelector('.copy-btn');
+      btn.textContent = '✓ Copied';
+      setTimeout(() => btn.textContent = 'Copy', 1800);
+    });
+  }
+
+  function showError(msg) {
+    const el = document.getElementById('login-error');
+    el.textContent = msg;
+    el.style.display = 'block';
+  }
+
+  // Enter key submits
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && document.getElementById('login-card').style.display !== 'none') {
+      doLogin();
+    }
+  });
+</script>
+</body>
+</html>
