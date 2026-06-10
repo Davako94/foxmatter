@@ -21,8 +21,8 @@
   "bugs": {
     "url": "https://github.com/yourusername/foxmatter/issues"
   },
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
+  "main": "src/index.js",
+  "types": "src/index.d.ts",
   "files": [
     "dist",
     "package.json",
