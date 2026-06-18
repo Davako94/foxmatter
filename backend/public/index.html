@@ -22,7 +22,6 @@ body {
 
 /* ── Logo ── */
 .logo-row { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
-.logo-icon { font-size: 2.2rem; }
 .logo-text { font-size: 1.9rem; font-weight: 800; letter-spacing: -0.5px; }
 
 .foxmatter-brand {
@@ -47,36 +46,25 @@ body {
 .tabs {
   display: grid; grid-template-columns: 1fr 1fr;
   gap: 8px; margin-bottom: 28px;
-  position: relative;
-  z-index: 100;
 }
 .tab {
   padding: 11px; border-radius: 8px; border: 1.5px solid var(--border);
   background: var(--surface2); cursor: pointer;
-  font-size: 0.9rem; font-weight: 600; color: var(--muted);
+  font-size: 0.9rem; font-weight: 700; color: var(--muted);
   transition: all 0.18s; display: flex; align-items: center;
-  justify-content: center; gap: 7px;
-  position: relative;
-  z-index: 101;
+  justify-content: center; gap: 8px;
 }
 .tab:hover { border-color: #444; color: var(--text); }
+.tab img { width: 18px; height: 18px; object-fit: contain; pointer-events: none; }
 
-.tab img, .tab span {
-  pointer-events: none;
+/* Active Tab Styles mapped via current chosen provider state */
+[data-provider="stremio"] #tab-stremio {
+  border-color: var(--stremio); color: var(--stremio);
+  background: var(--stremio-glow); box-shadow: 0 0 0 3px var(--stremio-glow);
 }
-
-.tab.active-stremio {
-  border-color: var(--stremio) !important; color: var(--stremio) !important;
-  background: var(--stremio-glow) !important; box-shadow: 0 0 0 3px var(--stremio-glow);
-}
-.tab.active-nuvio {
-  border-color: var(--nuvio) !important; color: var(--nuvio) !important;
-  background: var(--nuvio-glow) !important; box-shadow: 0 0 0 3px var(--nuvio-glow);
-}
-.tab img {
-  width: 18px;
-  height: 18px;
-  object-fit: contain;
+[data-provider="nuvio"] #tab-nuvio {
+  border-color: var(--nuvio); color: var(--nuvio);
+  background: var(--nuvio-glow); box-shadow: 0 0 0 3px var(--nuvio-glow);
 }
 
 /* ── Form fields ── */
@@ -87,9 +75,8 @@ input[type=email], input[type=password] {
   border-radius: 7px; color: var(--text); font-size: 0.93rem;
   outline: none; transition: border-color 0.15s;
 }
-input:focus { border-color: #555; }
-body.stremio-active input:focus { border-color: var(--stremio); }
-body.nuvio-active   input:focus { border-color: var(--nuvio);   }
+[data-provider="stremio"] input:focus { border-color: var(--stremio); }
+[data-provider="nuvio"] input:focus { border-color: var(--nuvio); }
 
 /* ── Buttons ── */
 .btn-login {
@@ -99,11 +86,12 @@ body.nuvio-active   input:focus { border-color: var(--nuvio);   }
   transition: opacity 0.15s, transform 0.1s;
   display: flex; align-items: center; justify-content: center; gap: 8px;
 }
-.btn-login:hover   { opacity: 0.88; }
-.btn-login:active  { transform: scale(0.98); }
+.btn-login:hover { opacity: 0.88; }
+.btn-login:active { transform: scale(0.98); }
 .btn-login:disabled { opacity: 0.45; cursor: not-allowed; }
-.btn-stremio { background: var(--stremio); color: #fff; }
-.btn-nuvio   { background: var(--nuvio);   color: #000; }
+
+[data-provider="stremio"] .btn-login { background: var(--stremio); color: #fff; }
+[data-provider="nuvio"] .btn-login { background: var(--nuvio); color: #000; }
 
 .btn-ghost {
   width: 100%; margin-top: 10px; padding: 10px;
@@ -136,8 +124,8 @@ body.nuvio-active   input:focus { border-color: var(--nuvio);   }
   padding: 4px 10px; border-radius: 20px; font-size: 0.75rem;
   font-weight: 700; margin-bottom: 16px;
 }
-.badge-stremio { background: var(--stremio-glow); color: var(--stremio); border: 1px solid var(--stremio); }
-.badge-nuvio   { background: var(--nuvio-glow);   color: var(--nuvio);   border: 1px solid var(--nuvio); }
+[data-provider="stremio"] .provider-badge { background: var(--stremio-glow); color: var(--stremio); border: 1px solid var(--stremio); }
+[data-provider="nuvio"] .provider-badge { background: var(--nuvio-glow); color: var(--nuvio); border: 1px solid var(--nuvio); }
 
 .install-title { font-size: 1.05rem; font-weight: 700; margin-bottom: 6px; color: var(--green); }
 .install-sub   { font-size: 0.83rem; color: var(--muted); margin-bottom: 20px; line-height: 1.5; }
@@ -150,8 +138,8 @@ body.nuvio-active   input:focus { border-color: var(--nuvio);   }
   text-decoration: none; transition: opacity 0.15s;
 }
 .btn-install:hover { opacity: 0.88; }
-.btn-install-stremio { background: var(--stremio); color: #fff; }
-.btn-install-nuvio   { background: var(--nuvio);   color: #000; }
+[data-provider="stremio"] .btn-install { background: var(--stremio); color: #fff; }
+[data-provider="nuvio"] .btn-install { background: var(--nuvio); color: #000; }
 
 .url-row {
   display: flex; align-items: center; gap: 8px;
@@ -164,7 +152,6 @@ body.nuvio-active   input:focus { border-color: var(--nuvio);   }
   flex-shrink: 0; padding: 5px 12px;
   background: var(--border); color: var(--text); border: none;
   border-radius: 5px; font-size: 0.73rem; cursor: pointer;
-  transition: background 0.1s;
 }
 .copy-btn:hover { background: #444; }
 
@@ -188,101 +175,91 @@ body.nuvio-active   input:focus { border-color: var(--nuvio);   }
 </div>
 <p class="tagline">Stream formatting & badges · Stremio & Nuvio</p>
 
-<div class="card" id="login-card">
+<div class="card" id="main-container" data-provider="stremio">
+  
+  <div id="login-card">
+    <div class="tabs">
+      <button type="button" class="tab" id="tab-stremio" onclick="setProvider('stremio')">
+        <img src="stremio.png" alt="" onerror="this.style.display='none'"> STREMIO
+      </button>
+      <button type="button" class="tab" id="tab-nuvio" onclick="setProvider('nuvio')">
+        <img src="nuvio.png" alt="" onerror="this.style.display='none'"> NUVIO
+      </button>
+    </div>
 
-  <div class="tabs">
-    <button type="button" class="tab" id="tab-stremio" onclick="setProvider('stremio')">
-      <img src="stremio.png" alt="" onerror="this.style.display='none'"> 🟣 STREMIO
+    <label class="field-label">Email Address</label>
+    <input type="email" id="email" placeholder="email@example.com" autocomplete="email"/>
+
+    <label class="field-label">Password</label>
+    <input type="password" id="password" placeholder="Password" autocomplete="current-password"/>
+
+    <button class="btn-login" id="login-btn" onclick="doLogin()">
+      Log In with Stremio
     </button>
-    <button type="button" class="tab" id="tab-nuvio" onclick="setProvider('nuvio')">
-      <img src="nuvio.png" alt="" onerror="this.style.display='none'"> 🟠 NUVIO
-    </button>
+
+    <div class="error-msg" id="login-error"></div>
+
+    <div class="hint" id="login-hint">
+      Use your <strong>Stremio</strong> account credentials.<br>
+      We do not store your password — only the session token.
+    </div>
   </div>
 
-  <label class="field-label">Email Address</label>
-  <input type="email" id="email" placeholder="email@example.com" autocomplete="email"/>
+  <div id="install-card">
+    <div class="provider-badge" id="provider-badge">Stremio</div>
 
-  <label class="field-label">Password</label>
-  <input type="password" id="password" placeholder="Password" autocomplete="current-password"/>
+    <div class="install-title">✓ Ready for Installation</div>
+    <p class="install-sub">
+      Click the button below to open <strong id="provider-name-label">Stremio</strong> and install
+      your personal Foxmatter addon.<br>
+      Once installed, <strong>move it to the top of your addon list</strong>.
+    </p>
 
-  <button class="btn-login" id="login-btn" onclick="doLogin()">
-    Log In with Stremio
-  </button>
+    <a id="install-btn" href="#" class="btn-install">
+      ⚡ Install in Stremio
+    </a>
 
-  <div class="error-msg" id="login-error"></div>
+    <div class="url-row">
+      <code id="url-text"></code>
+      <button class="copy-btn" onclick="copyUrl()">Copy</button>
+    </div>
 
-  <div class="hint" id="login-hint">
-    Use your <strong>Stremio</strong> account credentials.<br>
-    We do not store your password — only the session token.
-  </div>
-</div>
+    <div class="hint" style="margin-top:14px;">
+      <strong>Not opening?</strong> Copy the link above and paste it manually:<br>
+      Stremio → Settings → Addons → "Add via URL"
+    </div>
 
-<div class="card" id="install-card">
-
-  <div class="provider-badge" id="provider-badge">🟣 Stremio</div>
-
-  <div class="install-title">✓ Ready for Installation</div>
-  <p class="install-sub">
-    Click the button below to open <strong id="provider-name-label">Stremio</strong> and install
-    your personal Foxmatter addon.<br>
-    Once installed, <strong>move it to the top of your addon list</strong>.
-  </p>
-
-  <a id="install-btn" href="#" class="btn-install">
-    ⚡ Install in Stremio
-  </a>
-
-  <div class="url-row">
-    <code id="url-text"></code>
-    <button class="copy-btn" onclick="copyUrl()">Copy</button>
+    <button class="btn-ghost" onclick="doLogout()">↩ Switch Account</button>
   </div>
 
-  <div class="hint" style="margin-top:14px;">
-    <strong>Not opening?</strong> Copy the link above and paste it manually:<br>
-    Stremio → Settings → Addons → "Add via URL"
-  </div>
-
-  <button class="btn-ghost" onclick="doLogout()">↩ Switch Account</button>
 </div>
 
 <div class="footer">Foxmatter is open source and self-hostable.</div>
 
 <script>
-// ── State ──────────────────────────────────────────────────────────────────
+// ── Core Application State ─────────────────────────────────────────────────
 let provider = 'stremio';
-let token    = localStorage.getItem('fm_token');
+let token = localStorage.getItem('fm_token');
 let savedProvider = localStorage.getItem('fm_provider') || 'stremio';
 
-// ── Provider tab switch ────────────────────────────────────────────────────
+// ── Switch Provider Context Completely ─────────────────────────────────────
 function setProvider(p) {
   console.log('Provider actively switched to:', p);
   provider = p;
   localStorage.setItem('fm_provider', p);
 
-  // Sync up global layout structural classes
-  document.body.classList.remove('stremio-active', 'nuvio-active');
-  document.body.classList.add(p === 'stremio' ? 'stremio-active' : 'nuvio-active');
-
-  // Hard UI sync on the active tabs
-  const tabStremio = document.getElementById('tab-stremio');
-  const tabNuvio = document.getElementById('tab-nuvio');
-  
-  if (tabStremio) tabStremio.className = 'tab' + (p === 'stremio' ? ' active-stremio' : '');
-  if (tabNuvio) tabNuvio.className = 'tab' + (p === 'nuvio' ? ' active-nuvio' : '');
-
-  // CRITICAL FIX: Explicitly swap the button's execution label text and styles
-  const btn = document.getElementById('login-btn');
-  if (btn) {
-    if (p === 'stremio') {
-      btn.className = 'btn-login btn-stremio';
-      btn.textContent = 'Log In with Stremio';
-    } else {
-      btn.className = 'btn-login btn-nuvio';
-      btn.textContent = 'Log In with Nuvio';
-    }
+  // Update dynamic context state directly on container element
+  const container = document.getElementById('main-container');
+  if (container) {
+    container.setAttribute('data-provider', p);
   }
 
-  // Swap dynamic hint instructions
+  // Update interface strings instantly
+  const loginBtn = document.getElementById('login-btn');
+  if (loginBtn) {
+    loginBtn.textContent = p === 'stremio' ? 'Log In with Stremio' : 'Log In with Nuvio';
+  }
+
   const hint = document.getElementById('login-hint');
   if (hint) {
     hint.innerHTML = p === 'stremio'
@@ -293,7 +270,7 @@ function setProvider(p) {
   clearError();
 }
 
-// ── Login action execution ─────────────────────────────────────────────────
+// ── Authentication Engine ──────────────────────────────────────────────────
 async function doLogin() {
   const email = document.getElementById('email').value.trim();
   const password = document.getElementById('password').value;
@@ -305,9 +282,9 @@ async function doLogin() {
   btn.disabled = true;
   btn.innerHTML = '<span class="spinner"></span> Logging in…';
 
-  // Dynamic API endpoint routing based on active selection variable
+  // Determine correct endpoint according to target variable
   const endpoint = provider === 'nuvio' ? '/api/auth/login/nuvio' : '/api/auth/login';
-  console.log('Routing request to endpoint:', endpoint);
+  console.log('Sending payload to route endpoint:', endpoint);
 
   try {
     const res = await fetch(endpoint, {
@@ -328,18 +305,18 @@ async function doLogin() {
     
     const success = await fetchMe(token);
     if (!success) {
-      showError('Could not retrieve user configuration data.');
+      showError('Could not retrieve configuration payload.');
     }
 
   } catch (err) {
-    showError('Server is currently unreachable.');
+    showError('Server endpoint is currently unreachable.');
   } finally {
     btn.disabled = false;
     btn.textContent = provider === 'stremio' ? 'Log In with Stremio' : 'Log In with Nuvio';
   }
 }
 
-// ── Profile Sychronization ─────────────────────────────────────────────────
+// ── Profile Loader ─────────────────────────────────────────────────────────
 async function fetchMe(t) {
   try {
     const res = await fetch('/api/me', {
@@ -360,16 +337,16 @@ function showInstallCard(me) {
 
   const p = localStorage.getItem('fm_provider') || provider;
 
-  // Final confirmation screen rendering setup
+  // Sync up installation badge and display metrics
   const badge = document.getElementById('provider-badge');
-  badge.className = 'provider-badge ' + (p === 'nuvio' ? 'badge-nuvio' : 'badge-stremio');
-  badge.innerHTML = p === 'nuvio' ? '🟠 Nuvio' : '🟣 Stremio';
+  if (badge) {
+    badge.textContent = p === 'nuvio' ? 'Nuvio' : 'Stremio';
+  }
 
   document.getElementById('provider-name-label').textContent = p === 'nuvio' ? 'Nuvio' : 'Stremio';
 
   const installBtn = document.getElementById('install-btn');
   installBtn.textContent = p === 'nuvio' ? '⚡ Install in Nuvio' : '⚡ Install in Stremio';
-  installBtn.className = 'btn-install ' + (p === 'nuvio' ? 'btn-install-nuvio' : 'btn-install-stremio');
 
   const BASE = window.location.origin;
   const userId = me.userId;
@@ -380,7 +357,7 @@ function showInstallCard(me) {
   document.getElementById('url-text').textContent = httpUrl;
 }
 
-// ── Session Destructor ─────────────────────────────────────────────────────
+// ── Session Reset ──────────────────────────────────────────────────────────
 function doLogout() {
   localStorage.removeItem('fm_token');
   localStorage.removeItem('fm_provider');
@@ -402,7 +379,7 @@ function copyUrl() {
   });
 }
 
-// ── Helpers ────────────────────────────────────────────────────────────────
+// ── UI Error Handlers ──────────────────────────────────────────────────────
 function showError(msg) {
   const el = document.getElementById('login-error');
   if (el) {
@@ -416,11 +393,9 @@ function clearError() {
   if (el) el.style.display = 'none';
 }
 
-// ── Initialization Routine ──────────────────────────────────────────────────
+// ── Boot Sequence ─────────────────────────────────────────────────────────
 async function init() {
-  // Always favor the runtime setup on load context
   setProvider(savedProvider);
-  
   if (token) {
     const success = await fetchMe(token);
     if (!success) {
@@ -435,7 +410,7 @@ if (document.readyState === 'loading') {
   init();
 }
 
-// Enter Key handler
+// Global Enter key wrapper
 document.addEventListener('keydown', e => {
   if (e.key === 'Enter' && document.getElementById('login-card').style.display !== 'none') {
     doLogin();
