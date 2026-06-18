@@ -82,4 +82,4 @@ function getPath(obj, path) {
   return path.split('.').reduce((o, k) => (o != null && o[k] !== undefined ? o[k] : undefined), obj);
 }
 
-module.exports = { parseTemplate, buildStreamContext: require('./streamUtils').buildStreamContext };
+module.exports = { parseTemplate, buildStreamContext };
