@@ -1,13 +1,18 @@
 // services/userService.js - User persistence via Supabase for Foxmatter
 //
 // Supabase table: users
-//   id              uuid primary key default gen_random_uuid()
-//   stremio_id      text unique not null
-//   email           text unique not null
-//   name            text
-//   stremio_auth_key text          -- store encrypted in prod
-//   created_at      timestamptz default now()
-//   updated_at      timestamptz default now()
+//   id                uuid primary key default gen_random_uuid()
+//   provider          text not null default 'stremio'   -- 'stremio' | 'nuvio'
+//   provider_id       text not null                     -- stremio _id or nuvio user UUID
+//   email             text not null
+//   name              text
+//   stremio_auth_key  text
+//   nuvio_access_token  text
+//   nuvio_refresh_token text
+//   nuvio_user_id     text
+//   created_at        timestamptz default now()
+//   updated_at        timestamptz default now()
+//   unique(provider, provider_id)
 
 const { createClient } = require('@supabase/supabase-js');
 const { logger } = require('../utils/logger');
@@ -18,40 +23,64 @@ const supabase = createClient(
   { auth: { persistSession: false } }
 );
 
-/**
- * Create a new user row or update an existing one (upsert by stremio_id).
- * @param {{ stremioId, email, name, stremioAuthKey }} data
- * @returns {object} user row
- */
+// ─── Stremio user ──────────────────────────────────────────────────────────
+
 async function createOrUpdateUser({ stremioId, email, name, stremioAuthKey }) {
   const { data, error } = await supabase
     .from('users')
     .upsert(
       {
-        stremio_id: stremioId,
+        provider:         'stremio',
+        provider_id:      stremioId,
         email,
         name,
         stremio_auth_key: stremioAuthKey,
-        updated_at: new Date().toISOString(),
+        updated_at:       new Date().toISOString(),
       },
-      { onConflict: 'stremio_id', ignoreDuplicates: false }
+      { onConflict: 'provider,provider_id', ignoreDuplicates: false }
     )
     .select()
     .single();
 
   if (error) {
-    logger.error('createOrUpdateUser error:', error.message);
+    logger.error('createOrUpdateUser (stremio) error:', error.message);
     throw new Error(`DB error: ${error.message}`);
   }
 
   return normalizeUser(data);
 }
 
-/**
- * Fetch a user by their internal UUID.
- * @param {string} userId - Our internal UUID
- * @returns {object|null}
- */
+// ─── Nuvio user ────────────────────────────────────────────────────────────
+
+async function createOrUpdateNuvioUser({ nuvioUserId, email, name, accessToken, refreshToken }) {
+  const { data, error } = await supabase
+    .from('users')
+    .upsert(
+      {
+        provider:             'nuvio',
+        provider_id:          nuvioUserId,
+        email,
+        name,
+        nuvio_user_id:        nuvioUserId,
+        nuvio_access_token:   accessToken,
+        nuvio_refresh_token:  refreshToken,
+        updated_at:           new Date().toISOString(),
+      },
+      { onConflict: 'provider,provider_id', ignoreDuplicates: false }
+    )
+    .select()
+    .single();
+
+  if (error) {
+    logger.error('createOrUpdateNuvioUser error:', error.message);
+    throw new Error(`DB error: ${error.message}`);
+  }
+
+  return normalizeUser(data);
+}
+
+// ─── Generic lookups ───────────────────────────────────────────────────────
+
 async function getUserById(userId) {
   const { data, error } = await supabase
     .from('users')
@@ -67,16 +96,12 @@ async function getUserById(userId) {
   return data ? normalizeUser(data) : null;
 }
 
-/**
- * Fetch a user by their Stremio account ID.
- * @param {string} stremioId
- * @returns {object|null}
- */
 async function getUserByStremioId(stremioId) {
   const { data, error } = await supabase
     .from('users')
     .select('*')
-    .eq('stremio_id', stremioId)
+    .eq('provider', 'stremio')
+    .eq('provider_id', stremioId)
     .maybeSingle();
 
   if (error) {
@@ -87,10 +112,6 @@ async function getUserByStremioId(stremioId) {
   return data ? normalizeUser(data) : null;
 }
 
-/**
- * Delete a user and cascade their configs.
- * (Supabase foreign key ON DELETE CASCADE handles child rows.)
- */
 async function deleteUser(userId) {
   const { error } = await supabase
     .from('users')
@@ -106,26 +127,29 @@ async function deleteUser(userId) {
   return true;
 }
 
-// ─── Internal helpers ──────────────────────────────────────────────────────
+// ─── Helpers ───────────────────────────────────────────────────────────────
 
-/**
- * Map snake_case DB columns → camelCase for application code.
- * Never expose stremio_auth_key to API responses.
- */
 function normalizeUser(row) {
   return {
-    id: row.id,
-    stremioId: row.stremio_id,
-    email: row.email,
-    name: row.name,
-    stremioAuthKey: row.stremio_auth_key, // Only used server-side
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
+    id:                 row.id,
+    provider:           row.provider || 'stremio',
+    providerId:         row.provider_id,
+    email:              row.email,
+    name:               row.name,
+    // Stremio
+    stremioAuthKey:     row.stremio_auth_key,
+    // Nuvio
+    nuvioUserId:        row.nuvio_user_id,
+    nuvioAccessToken:   row.nuvio_access_token,
+    nuvioRefreshToken:  row.nuvio_refresh_token,
+    createdAt:          row.created_at,
+    updatedAt:          row.updated_at,
   };
 }
 
 module.exports = {
   createOrUpdateUser,
+  createOrUpdateNuvioUser,
   getUserById,
   getUserByStremioId,
   deleteUser,
