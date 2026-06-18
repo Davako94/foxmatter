@@ -256,7 +256,7 @@ let savedProvider = localStorage.getItem('fm_provider') || 'stremio';
 
 // ── Provider tab switch ────────────────────────────────────────────────────
 function setProvider(p) {
-  console.log('setProvider chiamato con:', p); // Debug
+  console.log('setProvider chiamato con:', p);
   provider = p;
   localStorage.setItem('fm_provider', p);
 
@@ -267,18 +267,23 @@ function setProvider(p) {
   const tabStremio = document.getElementById('tab-stremio');
   const tabNuvio = document.getElementById('tab-nuvio');
   
-  tabStremio.className = 'tab' + (p === 'stremio' ? ' active-stremio' : '');
-  tabNuvio.className = 'tab' + (p === 'nuvio' ? ' active-nuvio' : '');
+  if (tabStremio) tabStremio.className = 'tab' + (p === 'stremio' ? ' active-stremio' : '');
+  if (tabNuvio) tabNuvio.className = 'tab' + (p === 'nuvio' ? ' active-nuvio' : '');
 
   // Button
   const btn = document.getElementById('login-btn');
-  btn.className = p === 'stremio' ? 'btn-login btn-stremio' : 'btn-login btn-nuvio';
-  btn.textContent = p === 'stremio' ? 'Accedi con Stremio' : 'Accedi con Nuvio';
+  if (btn) {
+    btn.className = p === 'stremio' ? 'btn-login btn-stremio' : 'btn-login btn-nuvio';
+    btn.textContent = p === 'stremio' ? 'Accedi con Stremio' : 'Accedi con Nuvio';
+  }
 
   // Hint
-  document.getElementById('login-hint').innerHTML = p === 'stremio'
-    ? 'Usa le credenziali del tuo account <strong>Stremio</strong>.<br>Non salviamo la tua password — solo il token di sessione.'
-    : 'Usa le credenziali del tuo account <strong>Nuvio</strong>.<br>Non salviamo la tua password — solo il token di sessione.';
+  const hint = document.getElementById('login-hint');
+  if (hint) {
+    hint.innerHTML = p === 'stremio'
+      ? 'Usa le credenziali del tuo account <strong>Stremio</strong>.<br>Non salviamo la tua password — solo il token di sessione.'
+      : 'Usa le credenziali del tuo account <strong>Nuvio</strong>.<br>Non salviamo la tua password — solo il token di sessione.';
+  }
 
   clearError();
 }
@@ -312,9 +317,14 @@ async function doLogin() {
     token = data.token;
     localStorage.setItem('fm_token', token);
     localStorage.setItem('fm_provider', provider);
-    await fetchMe(token);
+    
+    // Verifica se la sincronizzazione del profilo funziona correttamente
+    const success = await fetchMe(token);
+    if (!success) {
+      showError('Sincronizzazione profilo fallita.');
+    }
 
-  } catch {
+  } catch (err) {
     showError('Server non raggiungibile.');
   } finally {
     btn.disabled = false;
@@ -363,7 +373,7 @@ function showInstallCard(me) {
   const httpUrl = `${BASE}/proxy/${userId}/manifest.json`;
   const stremioUrl = `stremio://${window.location.host}/proxy/${userId}/manifest.json`;
 
-  installBtn.href = stremioUrl;
+  installBtn.href = p === 'nuvio' ? httpUrl : stremioUrl; // Adatta lo schema in base al provider
   document.getElementById('url-text').textContent = httpUrl;
 }
 
@@ -392,22 +402,34 @@ function copyUrl() {
 // ── Helpers ────────────────────────────────────────────────────────────────
 function showError(msg) {
   const el = document.getElementById('login-error');
-  el.textContent = msg;
-  el.style.display = 'block';
+  if (el) {
+    el.textContent = msg;
+    el.style.display = 'block';
+  }
 }
 
 function clearError() {
-  document.getElementById('login-error').style.display = 'none';
+  const el = document.getElementById('login-error');
+  if (el) el.style.display = 'none';
 }
 
 // ── Boot ───────────────────────────────────────────────────────────────────
-// Inizializza subito senza aspettare DOMContentLoaded
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', () => {
-    setProvider(savedProvider);
-  });
-} else {
+async function init() {
   setProvider(savedProvider);
+  
+  // Se esiste un token, esegue l'auto-login automatico
+  if (token) {
+    const success = await fetchMe(token);
+    if (!success) {
+      localStorage.removeItem('fm_token');
+    }
+  }
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', init);
+} else {
+  init();
 }
 
 // Enter key
@@ -416,10 +438,6 @@ document.addEventListener('keydown', e => {
     doLogin();
   }
 });
-
-// Debug - mostra lo stato corrente
-console.log('Provider iniziale:', savedProvider);
-console.log('Token presente:', !!token);
 </script>
 </body>
 </html>
