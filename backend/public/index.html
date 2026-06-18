@@ -189,11 +189,11 @@ input:focus { border-color: var(--accent, #555); }
 
   <!-- Provider tabs -->
   <div class="tabs">
-    <button type="button" class="tab active-stremio" id="tab-stremio">
+    <button type="button" class="tab active-stremio" id="tab-stremio" onclick="setProvider('stremio')">
       <img src="stremio.png" alt="Stremio">
       STREMIO
     </button>
-    <button type="button" class="tab" id="tab-nuvio">
+    <button type="button" class="tab" id="tab-nuvio" onclick="setProvider('nuvio')">
       <img src="nuvio.png" alt="Nuvio">
       NUVIO
     </button>
@@ -205,7 +205,7 @@ input:focus { border-color: var(--accent, #555); }
   <label class="field-label">Password</label>
   <input type="password" id="password" placeholder="Password" autocomplete="current-password"/>
 
-  <button class="btn-login btn-stremio" id="login-btn">
+  <button class="btn-login btn-stremio" id="login-btn" onclick="doLogin()">
     Accedi con Stremio
   </button>
 
@@ -235,7 +235,7 @@ input:focus { border-color: var(--accent, #555); }
 
   <div class="url-row">
     <code id="url-text"></code>
-    <button class="copy-btn">Copia</button>
+    <button class="copy-btn" onclick="copyUrl()">Copia</button>
   </div>
 
   <div class="hint" style="margin-top:14px;">
@@ -243,7 +243,7 @@ input:focus { border-color: var(--accent, #555); }
     Stremio → Impostazioni → Addon → "Aggiungi tramite URL"
   </div>
 
-  <button class="btn-ghost">↩ Cambia account</button>
+  <button class="btn-ghost" onclick="doLogout()">↩ Cambia account</button>
 </div>
 
 <div class="footer">Foxmatter è open source e self-hostabile.</div>
@@ -254,37 +254,9 @@ let provider = 'stremio';
 let token    = localStorage.getItem('fm_token');
 let savedProvider = localStorage.getItem('fm_provider') || 'stremio';
 
-// ── Boot ───────────────────────────────────────────────────────────────────
-window.addEventListener('DOMContentLoaded', async () => {
-  // Setup tabs
-  document.getElementById('tab-stremio').addEventListener('click', () => setProvider('stremio'));
-  document.getElementById('tab-nuvio').addEventListener('click', () => setProvider('nuvio'));
-  
-  // Setup login button
-  document.getElementById('login-btn').addEventListener('click', doLogin);
-  
-  // Setup copy button
-  document.querySelector('.copy-btn').addEventListener('click', copyUrl);
-  
-  // Setup logout button
-  document.querySelector('.btn-ghost').addEventListener('click', doLogout);
-
-  // Set initial provider
-  setProvider(savedProvider);
-
-  if (token) {
-    provider = savedProvider;
-    const ok = await fetchMe(token);
-    if (!ok) {
-      localStorage.removeItem('fm_token');
-      localStorage.removeItem('fm_provider');
-      token = null;
-    }
-  }
-});
-
 // ── Provider tab switch ────────────────────────────────────────────────────
 function setProvider(p) {
+  console.log('setProvider chiamato con:', p); // Debug
   provider = p;
   localStorage.setItem('fm_provider', p);
 
@@ -292,10 +264,11 @@ function setProvider(p) {
   document.body.classList.add(p === 'stremio' ? 'stremio-active' : 'nuvio-active');
 
   // Tabs
-  document.getElementById('tab-stremio').className = 
-    'tab' + (p === 'stremio' ? ' active-stremio' : '');
-  document.getElementById('tab-nuvio').className = 
-    'tab' + (p === 'nuvio' ? ' active-nuvio' : '');
+  const tabStremio = document.getElementById('tab-stremio');
+  const tabNuvio = document.getElementById('tab-nuvio');
+  
+  tabStremio.className = 'tab' + (p === 'stremio' ? ' active-stremio' : '');
+  tabNuvio.className = 'tab' + (p === 'nuvio' ? ' active-nuvio' : '');
 
   // Button
   const btn = document.getElementById('login-btn');
@@ -403,7 +376,6 @@ function doLogout() {
   document.getElementById('login-card').style.display = 'block';
   document.getElementById('email').value = '';
   document.getElementById('password').value = '';
-  savedProvider = 'stremio';
   setProvider('stremio');
 }
 
@@ -428,12 +400,26 @@ function clearError() {
   document.getElementById('login-error').style.display = 'none';
 }
 
+// ── Boot ───────────────────────────────────────────────────────────────────
+// Inizializza subito senza aspettare DOMContentLoaded
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', () => {
+    setProvider(savedProvider);
+  });
+} else {
+  setProvider(savedProvider);
+}
+
 // Enter key
 document.addEventListener('keydown', e => {
   if (e.key === 'Enter' && document.getElementById('login-card').style.display !== 'none') {
     doLogin();
   }
 });
+
+// Debug - mostra lo stato corrente
+console.log('Provider iniziale:', savedProvider);
+console.log('Token presente:', !!token);
 </script>
 </body>
 </html>
