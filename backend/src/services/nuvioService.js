@@ -89,7 +89,7 @@ async function fetchNuvioAddons(accessToken, nuvioUserId) {
       },
     });
 
-    const rows = res.data || [];
+  const rows = res.data || [];
     logger.info(`Fetched ${rows.length} Nuvio addons for user ${nuvioUserId}`);
 
     const addons = rows
@@ -132,7 +132,7 @@ function normalizeNuvioAddon(row) {
   try {
     // Shape A: manifest already in the row
     if (row.manifest && typeof row.manifest === 'object') {
-      const transportUrl = row.manifest_url || row.manifest?.transportUrl;
+      const transportUrl = row.url || row.manifest_url || row.manifest?.transportUrl;
       if (!transportUrl) return null;
       
       return normalizeAddon({
@@ -141,9 +141,9 @@ function normalizeNuvioAddon(row) {
       });
     }
 
-    // Shape B: only a URL
-    if (row.manifest_url) {
-      const url = row.manifest_url;
+    // Shape B: only a URL (La colonna reale nel DB recuperata dai log è row.url)
+    if (row.url || row.manifest_url) {
+      const url = row.url || row.manifest_url;
       const slug = url
         .replace(/^https?:\/\//, '')
         .replace(/\/manifest\.json$/, '')
@@ -168,7 +168,7 @@ function normalizeNuvioAddon(row) {
       };
     }
 
-    logger.warn('Nuvio addon row has neither manifest nor manifest_url — skipping', row);
+    logger.warn('Nuvio addon row has neither manifest nor url — skipping', JSON.stringify(row));
     return null;
   } catch (err) {
     logger.warn('normalizeNuvioAddon error:', err.message);

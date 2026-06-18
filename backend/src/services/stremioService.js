@@ -153,7 +153,6 @@ function normalizeAddon(addon) {
   const manifest = addon.manifest || {};
   const resources = manifest.resources || [];
   
-  // Controllo robusto senza opzioni sintattiche errate (?.) sulle funzioni di array
   const hasStreamResource = resources.some(r => {
     if (typeof r === 'string') return r === 'stream';
     if (r && typeof r === 'object') return r.name === 'stream';

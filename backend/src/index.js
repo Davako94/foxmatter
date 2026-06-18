@@ -17,6 +17,7 @@ const { logger } = require('./utils/logger');
 const { verifyToken } = require('./utils/jwt');
 
 const app = express();
+app.set('trust proxy', 1); // se dietro a un reverse proxy (es. Heroku, Cloudflare) per ottenere IP reali e abilitare rate limiting basato su IP
 const PORT = process.env.PORT || 3001;
 const BASE_URL = process.env.BASE_URL || 'http://localhost:3001';
 
