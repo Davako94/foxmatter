@@ -1,9 +1,11 @@
 'use strict';
 
+/**
+ * Risolve un template con il context fornito.
+ */
 function parseTemplate(template, ctx) {
   if (!template || typeof template !== 'string') return '';
   return template.replace(/\{([^{}]+)\}/g, (match, expression) => {
-    // Gestione OR chain
     if (expression.includes('::or::')) {
       const orParts = expression.split('::or::');
       for (const part of orParts) {
@@ -21,10 +23,8 @@ function evaluateExpression(expr, ctx) {
   const propPath = parts[0].trim();
   const rawValue = getPath(ctx, propPath);
 
-  // Se non ci sono modificatori, restituisci il valore
   if (parts.length === 1) return rawValue ?? '';
 
-  // Estrattore condizione/output: supporta [T||F], ["T"||"F"], ['T'||'F']
   const lastPart = parts[parts.length - 1];
   const outputMatch = lastPart.match(/^(.*?)\[(?:"|')?(.*?)(?:"|')?\s*\|\|\s*(?:"|')?(.*?)(?:"|')?\]$/s);
 
@@ -38,7 +38,6 @@ function evaluateExpression(expr, ctx) {
     condParts = [...parts.slice(1, -1), outputMatch[1].trim()].filter(Boolean);
   }
 
-  // Esecuzione trasformazioni (non condizionali)
   let currentVal = rawValue;
   for (const cond of condParts) {
     if (cond.startsWith('replace')) {
@@ -55,7 +54,6 @@ function evaluateExpression(expr, ctx) {
     }
   }
 
-  // Esecuzione valutazioni condizionali
   let conditionMet = false;
   for (const cond of condParts) {
     if (cond === 'exists') {
@@ -80,6 +78,38 @@ function evaluateExpression(expr, ctx) {
 
 function getPath(obj, path) {
   return path.split('.').reduce((o, k) => (o != null && o[k] !== undefined ? o[k] : undefined), obj);
+}
+
+/**
+ * Costruisce il context per i template.
+ */
+function buildStreamContext(stream, addonConfig) {
+  const rawTitle = stream.title || '';
+  const rawName  = stream.name  || '';
+  const addonName = addonConfig?.name || addonConfig?.slug || '';
+  
+  // Logic helpers (estratti per pulizia)
+  const qualityMatch = rawTitle.match(/4K|2160p|1080p|720p|480p/i);
+  const sizeMatch = rawTitle.match(/([\d.]+)\s*(GB|MB)/i);
+  const sizeBytes = sizeMatch ? Math.round(parseFloat(sizeMatch[1]) * (sizeMatch[2].toUpperCase() === 'GB' ? 1e9 : 1e6)) : null;
+
+  return {
+    stream: {
+      title: rawTitle,
+      quality: qualityMatch ? qualityMatch[0] : null,
+      resolution: qualityMatch ? qualityMatch[0] : null,
+      size: sizeBytes,
+      year: stream.year || null,
+      season: stream.season ?? null,
+      episode: stream.episode ?? null,
+      audioTags: [], // Aggiungi logica estrazione se serve
+      visualTags: [], 
+      languages: [],
+      regexMatched: stream._foxmatterRegex || null
+    },
+    service: { name: rawName },
+    addon: { name: addonName }
+  };
 }
 
 module.exports = { parseTemplate, buildStreamContext };
