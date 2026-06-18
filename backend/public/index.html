@@ -48,23 +48,23 @@ body {
   gap: 8px; margin-bottom: 28px;
 }
 .tab {
-  padding: 11px; border-radius: 8px; border: 1.5px solid var(--border);
+  padding: 12px; border-radius: 8px; border: 1.5px solid var(--border);
   background: var(--surface2); cursor: pointer;
   font-size: 0.9rem; font-weight: 700; color: var(--muted);
-  transition: all 0.18s; display: flex; align-items: center;
+  transition: all 0.15s ease-in-out; display: flex; align-items: center;
   justify-content: center; gap: 8px;
+  user-select: none;
 }
 .tab:hover { border-color: #444; color: var(--text); }
-.tab img { width: 18px; height: 18px; object-fit: contain; pointer-events: none; }
 
-/* Dynamic states */
+/* State Engines via attribute mapping */
 [data-provider="stremio"] #tab-stremio {
-  border-color: var(--stremio); color: var(--stremio);
-  background: var(--stremio-glow); box-shadow: 0 0 0 3px var(--stremio-glow);
+  border-color: var(--stremio) !important; color: var(--stremio) !important;
+  background: var(--stremio-glow) !important; box-shadow: 0 0 0 3px var(--stremio-glow);
 }
 [data-provider="nuvio"] #tab-nuvio {
-  border-color: var(--nuvio); color: var(--nuvio);
-  background: var(--nuvio-glow); box-shadow: 0 0 0 3px var(--nuvio-glow);
+  border-color: var(--nuvio) !important; color: var(--nuvio) !important;
+  background: var(--nuvio-glow) !important; box-shadow: 0 0 0 3px var(--nuvio-glow);
 }
 
 /* ── Form fields ── */
@@ -101,14 +101,14 @@ input[type=email], input[type=password] {
 }
 .btn-ghost:hover { border-color: #555; color: var(--text); }
 
-/* ── Error ── */
+/* ── Error Box ── */
 .error-msg {
   font-size: 0.82rem; color: #f55; margin-top: 14px;
   padding: 8px 12px; background: #ff000015; border-radius: 6px;
   border-left: 3px solid #f55; display: none;
 }
 
-/* ── Hint box ── */
+/* ── Hint Box ── */
 .hint {
   font-size: 0.77rem; color: var(--muted); margin-top: 16px;
   padding: 10px 13px; background: var(--surface2);
@@ -116,7 +116,7 @@ input[type=email], input[type=password] {
   line-height: 1.5;
 }
 
-/* ── Install card ── */
+/* ── Install Card ── */
 #install-card { display: none; }
 
 .provider-badge {
@@ -179,12 +179,8 @@ input[type=email], input[type=password] {
   
   <div id="login-card">
     <div class="tabs">
-      <button type="button" class="tab" id="tab-stremio">
-        <img src="stremio.png" alt="" onerror="this.style.display='none'"> STREMIO
-      </button>
-      <button type="button" class="tab" id="tab-nuvio">
-        <img src="nuvio.png" alt="" onerror="this.style.display='none'"> NUVIO
-      </button>
+      <button type="button" class="tab" id="tab-stremio">STREMIO</button>
+      <button type="button" class="tab" id="tab-nuvio">NUVIO</button>
     </div>
 
     <label class="field-label">Email Address</label>
@@ -237,29 +233,42 @@ input[type=email], input[type=password] {
 <div class="footer">Foxmatter is open source and self-hostable.</div>
 
 <script>
-// ── Global Isolated State ──────────────────────────────────────────────────
+// ── Global App State Variables ─────────────────────────────────────────────
 let provider = 'stremio';
-let token = localStorage.getItem('fm_token');
-let savedProvider = localStorage.getItem('fm_provider') || 'stremio';
+let token = null;
+let savedProvider = 'stremio';
 
-// ── Isolated Context Switch Engine ─────────────────────────────────────────
-function updateProviderUI(p) {
-  provider = p;
-  localStorage.setItem('fm_provider', p);
+// Safely probe localStorage wrapped inside a sandbox catch
+try {
+  token = localStorage.getItem('fm_token');
+  savedProvider = localStorage.getItem('fm_provider') || 'stremio';
+} catch (e) {
+  console.warn("Storage restricted. Running in session volatile state.");
+}
 
+// ── Context Swapping Core ──────────────────────────────────────────────────
+function switchProvider(target) {
+  provider = target;
+  try {
+    localStorage.setItem('fm_provider', target);
+  } catch(e){}
+
+  // Switch container visibility attribute state
   const container = document.getElementById('main-container');
   if (container) {
-    container.setAttribute('data-provider', p);
+    container.setAttribute('data-provider', target);
   }
 
+  // Rewrite Action Label Text
   const loginBtn = document.getElementById('login-btn');
   if (loginBtn) {
-    loginBtn.textContent = p === 'stremio' ? 'Log In with Stremio' : 'Log In with Nuvio';
+    loginBtn.textContent = target === 'stremio' ? 'Log In with Stremio' : 'Log In with Nuvio';
   }
 
+  // Rewrite instructions descriptive elements
   const hint = document.getElementById('login-hint');
   if (hint) {
-    hint.innerHTML = p === 'stremio'
+    hint.innerHTML = target === 'stremio'
       ? 'Use your <strong>Stremio</strong> account credentials.<br>We do not store your password — only the session token.'
       : 'Use your <strong>Nuvio</strong> account credentials.<br>We do not store your password — only the session token.';
   }
@@ -267,7 +276,7 @@ function updateProviderUI(p) {
   clearError();
 }
 
-// ── Error Management ───────────────────────────────────────────────────────
+// ── Validation and Error Systems ───────────────────────────────────────────
 function showError(msg) {
   const el = document.getElementById('login-error');
   if (el) {
@@ -281,19 +290,17 @@ function clearError() {
   if (el) el.style.display = 'none';
 }
 
-// ── Authentication Handler ─────────────────────────────────────────────────
-async function handleLogin() {
+// ── Authentication Process Execution ───────────────────────────────────────
+async function triggerLogin() {
   clearError();
-  const emailElement = document.getElementById('email');
-  const passwordElement = document.getElementById('password');
   
-  const email = emailElement ? emailElement.value.trim() : '';
-  const password = passwordElement ? passwordElement.value : '';
+  const emailVal = document.getElementById('email').value.trim();
+  const passVal = document.getElementById('password').value;
 
-  // Validation interceptor
-  if (!email || !password) { 
-    showError('Please fill in all fields.'); 
-    return; 
+  // Immediate frontend intercept validation
+  if (!emailVal || !passVal) {
+    showError('Please fill in all fields.');
+    return;
   }
 
   const btn = document.getElementById('login-btn');
@@ -306,7 +313,7 @@ async function handleLogin() {
     const res = await fetch(endpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({ email: emailVal, password: passVal }),
     });
     const data = await res.json();
 
@@ -316,13 +323,12 @@ async function handleLogin() {
     }
 
     token = data.token;
-    localStorage.setItem('fm_token', token);
-    localStorage.setItem('fm_provider', provider);
+    try {
+      localStorage.setItem('fm_token', token);
+      localStorage.setItem('fm_provider', provider);
+    } catch(e){}
     
-    const success = await fetchProfile(token);
-    if (!success) {
-      showError('Could not retrieve configuration payload.');
-    }
+    await verifyProfile(token);
 
   } catch (err) {
     showError('Server endpoint is currently unreachable.');
@@ -332,119 +338,29 @@ async function handleLogin() {
   }
 }
 
-// ── Fetch Profile Engine ───────────────────────────────────────────────────
-async function fetchProfile(t) {
+// ── Verification Profile Retrieval ─────────────────────────────────────────
+async function verifyProfile(t) {
   try {
     const res = await fetch('/api/me', {
       headers: { 'Authorization': 'Bearer ' + t },
     });
     if (!res.ok) return false;
     const me = await res.json();
-    renderInstallCard(me);
+    renderInstallationScreen(me);
     return true;
   } catch {
     return false;
   }
 }
 
-function renderInstallCard(me) {
+function renderInstallationScreen(me) {
   document.getElementById('login-card').style.display = 'none';
   document.getElementById('install-card').style.display = 'block';
 
-  const p = localStorage.getItem('fm_provider') || provider;
+  let currentP = provider;
+  try {
+    currentP = localStorage.getItem('fm_provider') || provider;
+  } catch(e){}
 
   const badge = document.getElementById('provider-badge');
-  if (badge) badge.textContent = p === 'nuvio' ? 'Nuvio' : 'Stremio';
-
-  document.getElementById('provider-name-label').textContent = p === 'nuvio' ? 'Nuvio' : 'Stremio';
-
-  const installBtn = document.getElementById('install-btn');
-  installBtn.textContent = p === 'nuvio' ? '⚡ Install in Nuvio' : '⚡ Install in Stremio';
-
-  const BASE = window.location.origin;
-  const userId = me.userId;
-  const httpUrl = `${BASE}/proxy/${userId}/manifest.json`;
-  const stremioUrl = `stremio://${window.location.host}/proxy/${userId}/manifest.json`;
-
-  installBtn.href = p === 'nuvio' ? httpUrl : stremioUrl; 
-  document.getElementById('url-text').textContent = httpUrl;
-}
-
-// ── Session Destructor ─────────────────────────────────────────────────────
-function handleLogout() {
-  localStorage.removeItem('fm_token');
-  localStorage.removeItem('fm_provider');
-  token = null;
-  document.getElementById('install-card').style.display = 'none';
-  document.getElementById('login-card').style.display = 'block';
-  document.getElementById('email').value = '';
-  document.getElementById('password').value = '';
-  updateProviderUI('stremio');
-}
-
-// ── Native Event Listeners Setup (Anti-blocking architecture) ──────────────
-function bindEvents() {
-  // Tab buttons bindings
-  const tabStremio = document.getElementById('tab-stremio');
-  const tabNuvio = document.getElementById('tab-nuvio');
-
-  if (tabStremio) {
-    tabStremio.addEventListener('click', () => updateProviderUI('stremio'));
-  }
-  if (tabNuvio) {
-    tabNuvio.addEventListener('click', () => updateProviderUI('nuvio'));
-  }
-
-  // Submit button login binding
-  const loginBtn = document.getElementById('login-btn');
-  if (loginBtn) {
-    loginBtn.addEventListener('click', handleLogin);
-  }
-
-  // Logout button binding
-  const logoutBtn = document.getElementById('logout-btn');
-  if (logoutBtn) {
-    logoutBtn.addEventListener('click', handleLogout);
-  }
-
-  // Copy button binding
-  const copyBtn = document.getElementById('copy-btn');
-  if (copyBtn) {
-    copyBtn.addEventListener('click', () => {
-      const url = document.getElementById('url-text').textContent;
-      navigator.clipboard.writeText(url).then(() => {
-        copyBtn.textContent = '✓ Copied';
-        setTimeout(() => copyBtn.textContent = 'Copy', 1800);
-      });
-    });
-  }
-
-  // Enter Keyboard support
-  document.addEventListener('keydown', e => {
-    if (e.key === 'Enter' && document.getElementById('login-card').style.display !== 'none') {
-      handleLogin();
-    }
-  });
-}
-
-// ── System Boot Sequence ────────────────────────────────────────────────────
-async function runtimeInit() {
-  bindEvents();
-  updateProviderUI(savedProvider);
-  
-  if (token) {
-    const success = await fetchProfile(token);
-    if (!success) {
-      localStorage.removeItem('fm_token');
-    }
-  }
-}
-
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', runtimeInit);
-} else {
-  runtimeInit();
-}
-</script>
-</body>
-</html>
+  if (badge) badge.textContent = currentP === 'nu
