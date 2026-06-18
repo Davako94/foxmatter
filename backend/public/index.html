@@ -205,7 +205,7 @@ input:focus { border-color: var(--accent, #555); }
   <label class="field-label">Password</label>
   <input type="password" id="password" placeholder="Password" autocomplete="current-password"/>
 
-  <button class="btn-login btn-stremio" id="login-btn" onclick="doLogin()">
+  <button class="btn-login btn-stremio" id="login-btn">
     Accedi con Stremio
   </button>
 
@@ -235,7 +235,7 @@ input:focus { border-color: var(--accent, #555); }
 
   <div class="url-row">
     <code id="url-text"></code>
-    <button class="copy-btn" onclick="copyUrl()">Copia</button>
+    <button class="copy-btn">Copia</button>
   </div>
 
   <div class="hint" style="margin-top:14px;">
@@ -243,7 +243,7 @@ input:focus { border-color: var(--accent, #555); }
     Stremio → Impostazioni → Addon → "Aggiungi tramite URL"
   </div>
 
-  <button class="btn-ghost" onclick="doLogout()">↩ Cambia account</button>
+  <button class="btn-ghost">↩ Cambia account</button>
 </div>
 
 <div class="footer">Foxmatter è open source e self-hostabile.</div>
@@ -256,21 +256,25 @@ let savedProvider = localStorage.getItem('fm_provider') || 'stremio';
 
 // ── Boot ───────────────────────────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded', async () => {
+  // Setup tabs
+  document.getElementById('tab-stremio').addEventListener('click', () => setProvider('stremio'));
+  document.getElementById('tab-nuvio').addEventListener('click', () => setProvider('nuvio'));
+  
+  // Setup login button
+  document.getElementById('login-btn').addEventListener('click', doLogin);
+  
+  // Setup copy button
+  document.querySelector('.copy-btn').addEventListener('click', copyUrl);
+  
+  // Setup logout button
+  document.querySelector('.btn-ghost').addEventListener('click', doLogout);
+
+  // Set initial provider
   setProvider(savedProvider);
-
-  document
-    .getElementById('tab-stremio')
-    .addEventListener('click', () => setProvider('stremio'));
-
-  document
-    .getElementById('tab-nuvio')
-    .addEventListener('click', () => setProvider('nuvio'));
 
   if (token) {
     provider = savedProvider;
-
     const ok = await fetchMe(token);
-
     if (!ok) {
       localStorage.removeItem('fm_token');
       localStorage.removeItem('fm_provider');
@@ -282,34 +286,21 @@ window.addEventListener('DOMContentLoaded', async () => {
 // ── Provider tab switch ────────────────────────────────────────────────────
 function setProvider(p) {
   provider = p;
-
   localStorage.setItem('fm_provider', p);
 
-  document.body.classList.remove(
-    'stremio-active',
-    'nuvio-active'
-  );
-
-  document.body.classList.add(
-    p === 'stremio'
-      ? 'stremio-active'
-      : 'nuvio-active'
-  );
+  document.body.classList.remove('stremio-active', 'nuvio-active');
+  document.body.classList.add(p === 'stremio' ? 'stremio-active' : 'nuvio-active');
 
   // Tabs
-  document.getElementById('tab-stremio').className =
+  document.getElementById('tab-stremio').className = 
     'tab' + (p === 'stremio' ? ' active-stremio' : '');
-  document.getElementById('tab-nuvio').className =
+  document.getElementById('tab-nuvio').className = 
     'tab' + (p === 'nuvio' ? ' active-nuvio' : '');
 
   // Button
   const btn = document.getElementById('login-btn');
-  btn.className = p === 'stremio'
-    ? 'btn-login btn-stremio'
-    : 'btn-login btn-nuvio';
-  btn.textContent = p === 'stremio'
-    ? 'Accedi con Stremio'
-    : 'Accedi con Nuvio';
+  btn.className = p === 'stremio' ? 'btn-login btn-stremio' : 'btn-login btn-nuvio';
+  btn.textContent = p === 'stremio' ? 'Accedi con Stremio' : 'Accedi con Nuvio';
 
   // Hint
   document.getElementById('login-hint').innerHTML = p === 'stremio'
@@ -321,7 +312,7 @@ function setProvider(p) {
 
 // ── Login ──────────────────────────────────────────────────────────────────
 async function doLogin() {
-  const email    = document.getElementById('email').value.trim();
+  const email = document.getElementById('email').value.trim();
   const password = document.getElementById('password').value;
   clearError();
 
@@ -332,11 +323,8 @@ async function doLogin() {
   btn.innerHTML = '<span class="spinner"></span> Accesso in corso…';
 
   try {
-    const endpoint = provider === 'nuvio'
-      ? '/api/auth/login/nuvio'
-      : '/api/auth/login';
-
-    const res  = await fetch(endpoint, {
+    const endpoint = provider === 'nuvio' ? '/api/auth/login/nuvio' : '/api/auth/login';
+    const res = await fetch(endpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password }),
@@ -357,9 +345,7 @@ async function doLogin() {
     showError('Server non raggiungibile.');
   } finally {
     btn.disabled = false;
-    btn.textContent = provider === 'stremio'
-      ? 'Accedi con Stremio'
-      : 'Accedi con Nuvio';
+    btn.textContent = provider === 'stremio' ? 'Accedi con Stremio' : 'Accedi con Nuvio';
   }
 }
 
@@ -370,7 +356,6 @@ async function fetchMe(t) {
       headers: { 'Authorization': 'Bearer ' + t },
     });
     if (!res.ok) return false;
-
     const me = await res.json();
     showInstallCard(me);
     return true;
@@ -380,7 +365,7 @@ async function fetchMe(t) {
 }
 
 function showInstallCard(me) {
-  document.getElementById('login-card').style.display   = 'none';
+  document.getElementById('login-card').style.display = 'none';
   document.getElementById('install-card').style.display = 'block';
 
   const p = localStorage.getItem('fm_provider') || provider;
@@ -393,20 +378,16 @@ function showInstallCard(me) {
     : '<img src="stremio.png" width="16"> Stremio';
 
   // Label
-  document.getElementById('provider-name-label').textContent =
-    p === 'nuvio' ? 'Nuvio' : 'Stremio';
+  document.getElementById('provider-name-label').textContent = p === 'nuvio' ? 'Nuvio' : 'Stremio';
 
   // Install button
   const installBtn = document.getElementById('install-btn');
-  installBtn.textContent = p === 'nuvio'
-    ? '⚡ Installa in Nuvio'
-    : '⚡ Installa in Stremio';
+  installBtn.textContent = p === 'nuvio' ? '⚡ Installa in Nuvio' : '⚡ Installa in Stremio';
   installBtn.className = 'btn-install ' + (p === 'nuvio' ? 'btn-install-nuvio' : 'btn-install-stremio');
 
-  // Both Stremio and Nuvio use the same stremio:// deep link protocol
   const BASE = window.location.origin;
   const userId = me.userId;
-  const httpUrl    = `${BASE}/proxy/${userId}/manifest.json`;
+  const httpUrl = `${BASE}/proxy/${userId}/manifest.json`;
   const stremioUrl = `stremio://${window.location.host}/proxy/${userId}/manifest.json`;
 
   installBtn.href = stremioUrl;
@@ -419,8 +400,8 @@ function doLogout() {
   localStorage.removeItem('fm_provider');
   token = null;
   document.getElementById('install-card').style.display = 'none';
-  document.getElementById('login-card').style.display   = 'block';
-  document.getElementById('email').value    = '';
+  document.getElementById('login-card').style.display = 'block';
+  document.getElementById('email').value = '';
   document.getElementById('password').value = '';
   savedProvider = 'stremio';
   setProvider('stremio');
@@ -442,6 +423,7 @@ function showError(msg) {
   el.textContent = msg;
   el.style.display = 'block';
 }
+
 function clearError() {
   document.getElementById('login-error').style.display = 'none';
 }
