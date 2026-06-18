@@ -20,8 +20,17 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 const BASE_URL = process.env.BASE_URL || 'http://localhost:3001';
 
-// ─── Security ──────────────────────────────────────────────────────────────
-app.use(helmet({ crossOriginEmbedderPolicy: false }));
+// ─── Security (Helmet configurato per consentire gli script inline della UI) ───
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      ...helmet.contentSecurityPolicy.getDefaultDirectives(),
+      "script-src": ["'self'", "'unsafe-inline'"],
+    },
+  },
+  crossOriginEmbedderPolicy: false
+}));
+
 app.use(cors({
   origin: process.env.NODE_ENV === 'production'
     ? [process.env.FRONTEND_URL, /\.foxmatter\.app$/]
