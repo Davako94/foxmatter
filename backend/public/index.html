@@ -3,470 +3,808 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Foxmatter — Stremio & Nuvio Stream Formatter</title>
+<title>Foxmatter — Stream Formatter</title>
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 :root {
-  --bg: #0c0c0e; --surface: #141416; --surface2: #1c1c1f;
-  --border: #2a2a2e; --text: #e8e8ea; --muted: #777;
-  --stremio: #8c49e0; --stremio-glow: #8c49e033;
-  --nuvio: #ff6b35;  --nuvio-glow: #ff6b3533;
-  --green: #4caf50;  --radius: 12px;
+  --bg:        #0c0c0e;
+  --surface:   #111113;
+  --surface2:  #18181b;
+  --surface3:  #1f1f23;
+  --border:    #2c2c31;
+  --text:      #e4e4e7;
+  --muted:     #71717a;
+  --dim:       #52525b;
+  --green:     #00ff88;
+  --green-dim: rgba(0,255,136,.1);
+  --stremio:   #8c49e0;
+  --stremio-g: rgba(140,73,224,.15);
+  --nuvio:     #ff6b35;
+  --nuvio-g:   rgba(255,107,53,.15);
+  --red:       #ef4444;
+  --amber:     #f59e0b;
+  --radius:    10px;
 }
+
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   background: var(--bg); color: var(--text);
-  min-height: 100vh; display: flex; flex-direction: column;
-  align-items: center; padding: 48px 16px 64px;
+  min-height: 100vh;
+  display: flex; flex-direction: column; align-items: center;
+  padding: 40px 16px 80px;
 }
 
-/* ── Logo ── */
-.logo-row { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
-.foxmatter-brand {
-  font-family: 'Courier New', monospace; font-size: 2.3rem; font-weight: 900;
-  letter-spacing: 4px; color: #00ff88;
-  text-shadow: 0 0 5px #00ff88, 0 0 15px #00ff88;
+/* ── Brand ── */
+.brand {
+  font-family: 'Courier New', monospace;
+  font-size: 2rem; font-weight: 900; letter-spacing: 5px;
+  color: var(--green);
+  text-shadow: 0 0 6px rgba(0,255,136,.5), 0 0 20px rgba(0,255,136,.2);
+  margin-bottom: 4px;
 }
-.tagline { color: var(--muted); font-size: 0.9rem; margin-bottom: 40px; text-align: center; }
+.tagline { color: var(--muted); font-size: .82rem; margin-bottom: 36px; }
 
-/* ── Card ── */
-.card {
+/* ── Panels ── */
+.panel {
+  width: 100%; max-width: 560px;
   background: var(--surface); border: 1px solid var(--border);
-  border-radius: var(--radius); padding: 28px 32px;
-  width: 100%; max-width: 520px;
+  border-radius: var(--radius); padding: 28px;
 }
 
 /* ── Provider tabs ── */
-.tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 28px; }
+.tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 24px; }
 .tab {
-  padding: 12px; border-radius: 8px; border: 1.5px solid var(--border);
-  background: var(--surface2); cursor: pointer; font-size: 0.9rem;
-  font-weight: 700; color: var(--muted); display: flex; align-items: center;
-  justify-content: center; gap: 8px; user-select: none; transition: all 0.15s;
+  padding: 10px; border-radius: 8px;
+  border: 1.5px solid var(--border);
+  background: var(--surface2); cursor: pointer;
+  font-size: .82rem; font-weight: 700; color: var(--muted);
+  display: flex; align-items: center; justify-content: center; gap: 7px;
+  transition: all .15s; user-select: none;
 }
-.tab img { width: 16px; height: 16px; object-fit: contain; pointer-events: none; }
+.tab img { width: 15px; height: 15px; object-fit: contain; }
+[data-prov="stremio"] #tab-stremio {
+  border-color: var(--stremio); color: var(--stremio);
+  background: var(--stremio-g); box-shadow: 0 0 0 3px rgba(140,73,224,.1);
+}
+[data-prov="nuvio"] #tab-nuvio {
+  border-color: var(--nuvio); color: var(--nuvio);
+  background: var(--nuvio-g); box-shadow: 0 0 0 3px rgba(255,107,53,.1);
+}
 
-[data-provider="stremio"] #tab-stremio {
-  border-color: var(--stremio) !important; color: var(--stremio) !important;
-  background: var(--stremio-glow) !important; box-shadow: 0 0 0 3px var(--stremio-glow);
+/* ── Form ── */
+label.lbl { display: block; font-size: .72rem; color: var(--muted); margin: 12px 0 4px; text-transform: uppercase; letter-spacing: .5px; }
+input[type=email], input[type=password] {
+  width: 100%; padding: 9px 12px;
+  background: var(--surface2); border: 1.5px solid var(--border);
+  border-radius: 7px; color: var(--text); font-size: .9rem; outline: none;
+  transition: border-color .15s;
 }
-[data-provider="nuvio"] #tab-nuvio {
-  border-color: var(--nuvio) !important; color: var(--nuvio) !important;
-  background: var(--nuvio-glow) !important; box-shadow: 0 0 0 3px var(--nuvio-glow);
-}
+[data-prov="stremio"] input:focus { border-color: var(--stremio); }
+[data-prov="nuvio"]   input:focus { border-color: var(--nuvio); }
 
-/* ── Form fields ── */
-.field-label { font-size: 0.75rem; color: var(--muted); margin: 14px 0 5px; display: block; }
-input[type=email], input[type=password], textarea {
-  width: 100%; padding: 10px 13px; background: var(--surface2);
-  border: 1.5px solid var(--border); border-radius: 7px; color: var(--text);
-  font-size: 0.93rem; outline: none; transition: border-color 0.15s;
+.btn-primary {
+  width: 100%; margin-top: 18px; padding: 11px;
+  border: none; border-radius: 8px;
+  font-size: .9rem; font-weight: 700; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  transition: opacity .15s;
 }
-textarea { font-family: monospace; font-size: 0.85rem; resize: vertical; min-height: 60px; }
-[data-provider="stremio"] input:focus, [data-provider="stremio"] textarea:focus { border-color: var(--stremio); }
-[data-provider="nuvio"] input:focus, [data-provider="nuvio"] textarea:focus { border-color: var(--nuvio); }
-
-/* ── Buttons ── */
-.btn-login, .btn-install {
-  width: 100%; margin-top: 20px; padding: 12px; border: none; border-radius: 8px;
-  font-size: 0.95rem; font-weight: 700; cursor: pointer; display: flex;
-  align-items: center; justify-content: center; gap: 8px; transition: opacity 0.15s;
-}
-.btn-login:disabled { opacity: 0.45; cursor: not-allowed; }
-[data-provider="stremio"] .btn-login, [data-provider="stremio"] .btn-install { background: var(--stremio); color: #fff; }
-[data-provider="nuvio"] .btn-login, [data-provider="nuvio"] .btn-install { background: var(--nuvio); color: #000; }
-
+.btn-primary:disabled { opacity: .4; cursor: not-allowed; }
+[data-prov="stremio"] .btn-primary { background: var(--stremio); color: #fff; }
+[data-prov="nuvio"]   .btn-primary { background: var(--nuvio);   color: #000; }
 .btn-ghost {
-  width: 100%; margin-top: 15px; padding: 10px; background: transparent;
-  border: 1px solid var(--border); border-radius: 8px; color: var(--muted);
-  font-size: 0.85rem; cursor: pointer;
+  width: 100%; margin-top: 12px; padding: 9px;
+  background: transparent; border: 1px solid var(--border);
+  border-radius: 8px; color: var(--muted); font-size: .82rem; cursor: pointer;
+}
+.btn-ghost:hover { border-color: var(--dim); color: var(--text); }
+.btn-sm {
+  padding: 5px 10px; border-radius: 5px; border: 1px solid var(--border);
+  background: var(--surface3); color: var(--muted); font-size: .72rem;
+  cursor: pointer; transition: all .12s;
+}
+.btn-sm:hover { border-color: var(--green); color: var(--green); }
+
+.error-box {
+  font-size: .8rem; color: var(--red); padding: 8px 12px;
+  background: rgba(239,68,68,.08); border-radius: 6px;
+  border-left: 3px solid var(--red); margin-top: 12px; display: none;
+}
+.hint-box {
+  font-size: .78rem; color: var(--muted); padding: 9px 12px;
+  background: var(--surface2); border-radius: 7px;
+  border-left: 3px solid var(--border); line-height: 1.55; margin-top: 14px;
 }
 
-/* ── Addon Formatter List ── */
-.addons-section { margin-top: 24px; border-top: 1px solid var(--border); padding-top: 20px; }
+/* ── Config screen ── */
+#config-panel { display: none; }
+.status-bar {
+  display: flex; align-items: center; gap: 8px;
+  font-size: .8rem; margin-bottom: 20px;
+}
+.status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); flex-shrink: 0; }
+.status-label { color: var(--green); font-weight: 700; }
+.status-sub { color: var(--muted); }
+
+/* ── Addon cards ── */
+.addon-list { margin-top: 4px; }
 .addon-card {
   background: var(--surface2); border: 1px solid var(--border);
-  border-radius: 8px; padding: 16px; margin-bottom: 16px;
+  border-radius: 9px; margin-bottom: 14px; overflow: hidden;
 }
-.addon-title { font-size: 1rem; font-weight: 700; text-transform: uppercase; color: #00ff88; margin-bottom: 12px; }
-.formatter-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
-
-.file-upload-row { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
-.file-input { display: none; }
-.btn-upload-label {
-  padding: 6px 12px; background: var(--border); border-radius: 5px;
-  font-size: 0.78rem; cursor: pointer; color: var(--text); border: 1px dashed #555;
+.addon-header {
+  display: flex; align-items: center; gap: 10px;
+  padding: 13px 16px; cursor: pointer;
+  border-bottom: 1px solid transparent; transition: border-color .15s;
 }
-.btn-upload-label:hover { background: #333; }
+.addon-header:hover { background: var(--surface3); }
+.addon-logo {
+  width: 28px; height: 28px; border-radius: 5px;
+  object-fit: contain; flex-shrink: 0;
+  background: var(--surface3);
+}
+.addon-logo-fallback {
+  width: 28px; height: 28px; border-radius: 5px; flex-shrink: 0;
+  background: var(--surface3); display: flex; align-items: center;
+  justify-content: center; font-size: .65rem; color: var(--dim);
+  font-weight: 700; text-transform: uppercase;
+}
+.addon-name { font-size: .88rem; font-weight: 700; color: var(--green); flex: 1; }
+.addon-chevron { color: var(--dim); font-size: .75rem; transition: transform .2s; }
+.addon-card.open .addon-header { border-bottom-color: var(--border); }
+.addon-card.open .addon-chevron { transform: rotate(90deg); }
+.addon-body { padding: 16px; display: none; }
+.addon-card.open .addon-body { display: block; }
 
-/* ── UI Elements ── */
-.error-msg { font-size: 0.82rem; color: #f55; margin-top: 14px; padding: 8px 12px; background: #ff000015; border-radius: 6px; border-left: 3px solid #f55; display: none; }
-.hint { font-size: 0.77rem; color: var(--muted); margin-top: 16px; padding: 10px 13px; background: var(--surface2); border-radius: 7px; border-left: 3px solid var(--border); line-height: 1.5; }
-.url-row { display: flex; align-items: center; gap: 8px; margin-top: 14px; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; }
-.url-row code { flex: 1; font-size: 0.7rem; color: var(--muted); word-break: break-all; }
-.copy-btn { padding: 5px 12px; background: var(--border); color: var(--text); border: none; border-radius: 5px; font-size: 0.73rem; cursor: pointer; }
-.provider-badge { display: inline-flex; padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 700; margin-bottom: 16px; }
-[data-provider="stremio"] .provider-badge { background: var(--stremio-glow); color: var(--stremio); border: 1px solid var(--stremio); }
-[data-provider="nuvio"] .provider-badge { background: var(--nuvio-glow); color: var(--nuvio); border: 1px solid var(--nuvio); }
-.install-title { font-size: 1.05rem; font-weight: 700; margin-bottom: 6px; color: var(--green); }
-.install-sub { font-size: 0.83rem; color: var(--muted); margin-bottom: 20px; line-height: 1.5; }
-.spinner { width: 14px; height: 14px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.3); border-top-color: currentColor; animation: spin 0.6s linear infinite; display: inline-block; }
+/* ── Template editor ── */
+.template-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.tmpl-label {
+  font-size: .68rem; color: var(--muted); text-transform: uppercase;
+  letter-spacing: .5px; margin-bottom: 5px;
+}
+.tmpl-input {
+  width: 100%; padding: 8px 10px; min-height: 68px;
+  background: var(--surface3); border: 1.5px solid var(--border);
+  border-radius: 6px; color: var(--text);
+  font-family: 'Courier New', monospace; font-size: .78rem;
+  resize: vertical; outline: none; transition: border-color .15s;
+  line-height: 1.5;
+}
+.tmpl-input:focus { border-color: var(--green); }
+
+/* ── Snippets ── */
+.snippets-row {
+  display: flex; flex-wrap: wrap; gap: 5px; margin-top: 8px;
+}
+.snippet {
+  padding: 3px 8px; background: var(--surface3); border: 1px solid var(--border);
+  border-radius: 4px; font-family: monospace; font-size: .7rem; color: var(--muted);
+  cursor: pointer; transition: all .12s;
+}
+.snippet:hover { border-color: var(--green); color: var(--green); background: var(--green-dim); }
+.snippets-section { margin-top: 10px; }
+.snippets-title { font-size: .68rem; color: var(--dim); margin-bottom: 5px; text-transform: uppercase; letter-spacing: .5px; }
+
+/* ── Preview ── */
+.preview-section { margin-top: 14px; }
+.preview-label { font-size: .68rem; color: var(--dim); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 6px; }
+.preview-box {
+  background: #000; border: 1px solid var(--border); border-radius: 7px; padding: 12px 14px;
+}
+.preview-name  { font-size: .85rem; font-weight: 700; color: #fff; margin-bottom: 3px; }
+.preview-title { font-size: .76rem; color: #aaa; line-height: 1.5; white-space: pre-wrap; }
+
+/* ── Variables reference ── */
+.vars-toggle {
+  display: flex; align-items: center; gap: 6px;
+  font-size: .75rem; color: var(--muted); cursor: pointer;
+  margin-top: 12px; user-select: none;
+}
+.vars-toggle:hover { color: var(--text); }
+.vars-panel {
+  margin-top: 8px; padding: 12px;
+  background: var(--surface3); border: 1px solid var(--border);
+  border-radius: 7px; display: none;
+}
+.vars-panel.open { display: block; }
+.vars-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 4px 10px;
+}
+.var-item { font-size: .72rem; }
+.var-name  { font-family: monospace; color: var(--green); }
+.var-desc  { color: var(--dim); }
+
+/* ── Upload JSON ── */
+.upload-row { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
+.file-input  { display: none; }
+.upload-lbl  {
+  padding: 5px 11px; background: var(--surface3);
+  border: 1px dashed var(--border); border-radius: 5px;
+  font-size: .74rem; cursor: pointer; color: var(--muted); transition: all .12s;
+}
+.upload-lbl:hover { border-color: var(--green); color: var(--green); }
+.upload-status { font-size: .73rem; color: var(--muted); }
+
+/* ── Enable toggle ── */
+.addon-toggle {
+  display: flex; align-items: center; gap: 6px; margin-bottom: 12px;
+}
+.toggle-track {
+  width: 34px; height: 18px; border-radius: 9px;
+  background: var(--border); position: relative; cursor: pointer;
+  transition: background .15s; flex-shrink: 0;
+}
+.toggle-track.on { background: var(--green); }
+.toggle-thumb {
+  position: absolute; top: 2px; left: 2px;
+  width: 14px; height: 14px; border-radius: 50%; background: #fff;
+  transition: left .15s;
+}
+.toggle-track.on .toggle-thumb { left: 18px; }
+.toggle-lbl { font-size: .76rem; color: var(--muted); }
+
+/* ── Install / URL ── */
+.section-divider { border: none; border-top: 1px solid var(--border); margin: 20px 0; }
+.url-row {
+  display: flex; align-items: center; gap: 8px;
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 8px; padding: 9px 12px; margin-top: 14px;
+}
+.url-row code { flex: 1; font-size: .68rem; color: var(--muted); word-break: break-all; }
+.copy-btn {
+  padding: 4px 11px; background: var(--surface3); border: 1px solid var(--border);
+  border-radius: 5px; color: var(--muted); font-size: .72rem; cursor: pointer;
+}
+.copy-btn:hover { color: var(--text); }
+
+.install-btn {
+  width: 100%; margin-top: 10px; padding: 11px;
+  border: none; border-radius: 8px;
+  font-size: .9rem; font-weight: 700; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  text-decoration: none;
+}
+[data-prov="stremio"] .install-btn { background: var(--stremio); color: #fff; }
+[data-prov="nuvio"]   .install-btn { background: var(--nuvio);   color: #000; }
+
+.save-btn {
+  width: 100%; margin-top: 16px; padding: 12px;
+  background: var(--green); color: #000;
+  border: none; border-radius: 8px;
+  font-size: .92rem; font-weight: 800; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  letter-spacing: .3px; transition: opacity .15s;
+}
+.save-btn:disabled { opacity: .4; cursor: not-allowed; }
+
+/* ── Spinner ── */
+.spin {
+  width: 13px; height: 13px; border-radius: 50%;
+  border: 2px solid rgba(0,0,0,.2); border-top-color: currentColor;
+  animation: spin .55s linear infinite; display: inline-block;
+}
 @keyframes spin { to { transform: rotate(360deg); } }
-.footer { color: var(--muted); font-size: 0.73rem; margin-top: 28px; text-align: center; }
+
+/* ── Footer ── */
+.footer { color: var(--dim); font-size: .7rem; margin-top: 28px; text-align: center; }
+
+/* ── Toast ── */
+.toast {
+  position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px);
+  padding: 10px 18px; border-radius: 8px; font-size: .84rem; font-weight: 600;
+  transition: transform .3s ease; z-index: 999; pointer-events: none;
+}
+.toast.show { transform: translateX(-50%) translateY(0); }
+.toast.success { background: var(--green); color: #000; }
+.toast.error   { background: var(--red);   color: #fff; }
 </style>
 </head>
 <body>
 
-<div class="logo-row"><span class="logo-text foxmatter-brand">FOXMATTER</span></div>
+<div class="brand">FOXMATTER</div>
 <p class="tagline">Stream formatting & badges · Stremio & Nuvio</p>
 
-<div class="card" id="main-container" data-provider="stremio">
-  
-  <!-- ── LOGIN INTERFACE ── -->
-  <div id="login-card">
-    <div class="tabs">
-      <button type="button" class="tab" id="tab-stremio"><img src="stremio.png" alt="" onerror="this.style.display='none'"> STREMIO</button>
-      <button type="button" class="tab" id="tab-nuvio"><img src="nuvio.png" alt="" onerror="this.style.display='none'"> NUVIO</button>
-    </div>
-    <label class="field-label">Email Address</label>
-    <input type="email" id="email" placeholder="email@example.com" autocomplete="email"/>
-    <label class="field-label">Password</label>
-    <input type="password" id="password" placeholder="Password" autocomplete="current-password"/>
-    <button type="button" class="btn-login" id="login-btn">Log In with Stremio</button>
-    <div class="error-msg" id="login-error"></div>
-    <div class="hint" id="login-hint">Use your <strong>Stremio</strong> account credentials.<br>We do not store your password — only the session token.</div>
+<!-- ═══════ LOGIN PANEL ═══════ -->
+<div class="panel" id="login-panel" data-prov="stremio">
+  <div class="tabs">
+    <button class="tab" id="tab-stremio" onclick="switchProv('stremio')">
+      <img src="stremio.png" onerror="this.style.display='none'" alt=""> STREMIO
+    </button>
+    <button class="tab" id="tab-nuvio" onclick="switchProv('nuvio')">
+      <img src="nuvio.png" onerror="this.style.display='none'" alt=""> NUVIO
+    </button>
   </div>
 
-  <!-- ── CONFIG & INSTALL INTERFACE ── -->
-  <div id="install-card" style="display:none;">
-    <div class="provider-badge" id="provider-badge">Stremio</div>
-    <div class="install-title">✓ Ready for Configuration</div>
-    <p class="install-sub">Customize your stream formatters below. When ready, install the generated master manifest and <strong>move it to the top of your addon list</strong>.</p>
+  <label class="lbl">Email</label>
+  <input type="email" id="email" placeholder="email@example.com" autocomplete="email"/>
+  <label class="lbl">Password</label>
+  <input type="password" id="password" placeholder="Password" autocomplete="current-password"/>
 
-    <!-- ── LISTA ADDON DINAMICI DA CONFIGURARE ── -->
-    <div class="addons-section" id="addons-list-container">
-      <p style="font-size:0.85rem; color:var(--muted)">Loading your active stream formatters...</p>
-    </div>
+  <button class="btn-primary" id="login-btn" onclick="doLogin()">Log in with Stremio</button>
+  <div class="error-box" id="login-err"></div>
+  <div class="hint-box">We store only a session token — never your password.</div>
+</div>
 
-    <button type="button" class="btn-install" id="save-config-btn" onclick="window.saveAddonConfig()">⚡ Save & Update Manifest</button>
+<!-- ═══════ CONFIG PANEL ═══════ -->
+<div class="panel" id="config-panel" data-prov="stremio">
+  <div class="status-bar">
+    <div class="status-dot"></div>
+    <span class="status-label">Ready for configuration</span>
+    <span class="status-sub" id="prov-badge"></span>
+  </div>
+  <p style="font-size:.8rem; color:var(--muted); line-height:1.6; margin-bottom:18px;">
+    Customize the stream name and description for each of your addons.
+    When saved, install the master manifest and
+    <strong style="color:var(--text)">move it to the top of your addon list</strong> in Stremio/Nuvio.
+  </p>
 
-    <div class="url-row">
-      <code id="url-text">Generating proxy URL...</code>
-      <button type="button" class="copy-btn" id="copy-btn">Copy</button>
-    </div>
-
-    <a id="install-btn" href="#" class="btn-install" style="margin-top:12px;">📥 Install in Stremio</a>
-    <button type="button" class="btn-ghost" id="logout-btn">↩ Switch Account</button>
+  <!-- Addon list -->
+  <div class="addon-list" id="addon-list">
+    <p style="font-size:.82rem; color:var(--muted);">Loading addons…</p>
   </div>
 
+  <hr class="section-divider">
+
+  <button class="save-btn" id="save-btn" onclick="saveConfig()">⚡ Save & Update</button>
+
+  <div class="url-row">
+    <code id="url-text">—</code>
+    <button class="copy-btn" onclick="copyUrl()">Copy</button>
+  </div>
+  <a id="install-link" href="#" class="install-btn" style="margin-top:10px;">📥 Install in Stremio</a>
+  <button class="btn-ghost" onclick="doLogout()">↩ Switch account</button>
 </div>
 
 <div class="footer">Foxmatter is open source and self-hostable.</div>
+<div class="toast" id="toast"></div>
 
+<!-- ═══════ Snippets data ═══════ -->
 <script>
-let provider = 'stremio';
-let token = null;
-let savedProvider = 'stremio';
-let serverAddonsRaw = []; // Mantiene la lista pulita ritornata dal backend
-let globalConfigObject = null; // Memorizza la config corrente del server
+// Variabili disponibili (sincronizzate con extractStreamVariables in proxy.js)
+const VARIABLES = [
+  { name: 'quality',     desc: 'Resolution (1080p, 4K…)' },
+  { name: 'resolution',  desc: 'Alias of quality' },
+  { name: 'encode',      desc: 'Codec (HEVC, x264…)' },
+  { name: 'hdr',         desc: 'HDR tag (HDR10, DV…)' },
+  { name: 'audio',       desc: 'Audio track (Atmos, TrueHD…)' },
+  { name: 'size',        desc: 'File size (e.g. 12.4 GB)' },
+  { name: 'seeders',     desc: 'Seeders count' },
+  { name: 'source',      desc: 'Indexer / service name' },
+  { name: 'filename',    desc: 'Original filename' },
+  { name: 'title',       desc: 'Full raw stream title' },
+  { name: 'name',        desc: 'Stream name label' },
+  { name: 'addon',       desc: 'Addon name' },
+  { name: 'service',     desc: 'Short service name' },
+  { name: 'langs',       desc: 'Language codes (ITA, ENG…)' },
+  { name: 'lang_flags',  desc: 'Language flag emojis 🇮🇹' },
+  { name: 'stream_type', desc: 'HTTP / Torrent / Debrid' },
+];
 
-try {
-  token = localStorage.getItem('fm_token');
-  savedProvider = localStorage.getItem('fm_provider') || 'stremio';
-} catch (e) {}
+const SNIPPETS_NAME = [
+  { label: '{quality}',          val: '{quality}' },
+  { label: '{quality} | {source}', val: '{quality} | {source}' },
+  { label: '{encode}',           val: '{encode}' },
+  { label: '{size}',             val: '{size}' },
+  { label: '{addon}',            val: '{addon}' },
+  { label: '🔹 {quality}',       val: '🔹 {quality}' },
+];
 
-function switchProvider(target) {
-  provider = target;
-  try { localStorage.setItem('fm_provider', target); } catch(e){}
-  const container = document.getElementById('main-container');
-  if (container) container.setAttribute('data-provider', target);
-  const loginBtn = document.getElementById('login-btn');
-  if (loginBtn) loginBtn.textContent = target === 'stremio' ? 'Log In with Stremio' : 'Log In with Nuvio';
-  const hint = document.getElementById('login-hint');
-  if (hint) {
-    hint.innerHTML = target === 'stremio'
-      ? 'Use your <strong>Stremio</strong> account credentials.<br>We do not store your password — only the session token.'
-      : 'Use your <strong>Nuvio</strong> account credentials.<br>We do not store your password — only the session token.';
-  }
-  clearError();
+const SNIPPETS_DESC = [
+  { label: '{filename}',          val: '{filename}' },
+  { label: '⚡ {seeders} S',      val: '⚡ {seeders} S' },
+  { label: '{langs}',             val: '{langs}' },
+  { label: '{lang_flags}',        val: '{lang_flags}' },
+  { label: '{title}',             val: '{title}' },
+  { label: '{size} · {source}',   val: '{size} · {source}' },
+];
+
+// Dati di preview fittizi (realistici)
+const PREVIEW_DATA = {
+  quality: '1080p', resolution: '1080p', encode: 'HEVC', hdr: 'HDR10',
+  audio: 'Atmos', size: '12.4 GB', size_bytes: 12400000000,
+  seeders: '87', source: 'Real-Debrid', filename: 'Movie.2024.1080p.BluRay.HEVC.mkv',
+  title: 'Movie.2024.1080p.BluRay.HEVC.mkv\n🇮🇹 🇬🇧 ⚡ Real-Debrid\n💾 12.4 GB 👥 87',
+  name: '[RD⚡] Torrentio', addon: 'Torrentio', service: 'RD',
+  langs: 'ITA ENG', lang_flags: '🇮🇹 🇬🇧', stream_type: 'Debrid',
+};
+
+// ── State ──────────────────────────────────────────────────────────────────
+let prov   = 'stremio';
+let token  = null;
+let addons = [];        // array raw dal server
+let config = null;      // config globale dal server
+
+try { token = localStorage.getItem('fm_token'); prov = localStorage.getItem('fm_prov') || 'stremio'; } catch(_) {}
+
+// ── Provider switch ────────────────────────────────────────────────────────
+function switchProv(p) {
+  prov = p;
+  try { localStorage.setItem('fm_prov', p); } catch(_) {}
+  document.getElementById('login-panel').setAttribute('data-prov', p);
+  document.getElementById('config-panel').setAttribute('data-prov', p);
+  document.getElementById('login-btn').textContent = `Log in with ${p === 'nuvio' ? 'Nuvio' : 'Stremio'}`;
 }
 
-function showError(msg) {
-  const el = document.getElementById('login-error');
-  if (el) { el.textContent = msg; el.style.display = 'block'; }
-}
-function clearError() {
-  const el = document.getElementById('login-error');
-  if (el) el.style.display = 'none';
+// ── Toast ──────────────────────────────────────────────────────────────────
+function toast(msg, type = 'success') {
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.className = `toast ${type} show`;
+  setTimeout(() => el.classList.remove('show'), 2800);
 }
 
-async function triggerLogin() {
-  clearError();
-  const emailVal = document.getElementById('email').value.trim();
-  const passVal = document.getElementById('password').value;
-  if (!emailVal || !passVal) { showError('Please fill in all fields.'); return; }
+// ── Error ──────────────────────────────────────────────────────────────────
+function showErr(msg) {
+  const el = document.getElementById('login-err');
+  el.textContent = msg; el.style.display = 'block';
+}
+function clearErr() { document.getElementById('login-err').style.display = 'none'; }
+
+// ── Login ──────────────────────────────────────────────────────────────────
+async function doLogin() {
+  clearErr();
+  const email = document.getElementById('email').value.trim();
+  const pass  = document.getElementById('password').value;
+  if (!email || !pass) { showErr('Fill in all fields.'); return; }
 
   const btn = document.getElementById('login-btn');
   btn.disabled = true;
-  btn.innerHTML = '<span class="spinner"></span> Logging in…';
-  const endpoint = provider === 'nuvio' ? '/api/auth/login/nuvio' : '/api/auth/login';
+  btn.innerHTML = '<span class="spin"></span> Logging in…';
 
   try {
-    const res = await fetch(endpoint, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: emailVal, password: passVal }),
+    const endpoint = prov === 'nuvio' ? '/api/auth/login/nuvio' : '/api/auth/login';
+    const res  = await fetch(endpoint, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password: pass }),
     });
     const data = await res.json();
-    if (!res.ok) { showError(data.error || 'Invalid credentials.'); return; }
+    if (!res.ok) { showErr(data.error || 'Invalid credentials.'); return; }
+
     token = data.token;
-    try {
-      localStorage.setItem('fm_token', token);
-      localStorage.setItem('fm_provider', provider);
-    } catch(e){}
-    await verifyProfile(token);
-  } catch (err) {
-    showError('Server endpoint is currently unreachable.');
+    try { localStorage.setItem('fm_token', token); } catch(_) {}
+    await loadConfigScreen();
+  } catch(_) {
+    showErr('Server unreachable.');
   } finally {
     btn.disabled = false;
-    btn.textContent = provider === 'stremio' ? 'Log In with Stremio' : 'Log In with Nuvio';
+    btn.textContent = `Log in with ${prov === 'nuvio' ? 'Nuvio' : 'Stremio'}`;
   }
 }
 
-async function verifyProfile(t) {
+// ── Load config screen ─────────────────────────────────────────────────────
+async function loadConfigScreen() {
+  // 1. Carica config globale
   try {
-    const res = await fetch('/api/me', { headers: { 'Authorization': 'Bearer ' + t } });
-    if (!res.ok) return false;
-    
-    // 1. Scarica la configurazione globale attuale (per non sovrascrivere globalBadges e settings)
-    const configRes = await fetch('/api/config', { headers: { 'Authorization': 'Bearer ' + t } });
-    if (configRes.ok) {
-      const configData = await configRes.json();
-      globalConfigObject = configData.config;
-    }
+    const r = await fetch('/api/config', { headers: { 'Authorization': 'Bearer ' + token } });
+    if (r.ok) config = (await r.json()).config;
+  } catch(_) {}
 
-    // 2. Scarica gli addon dell'utente mappati dal backend
-    await fetchUserAddons(t);
-    
-    // 3. Mostra la schermata finale passando l'oggetto profilo utente
-    const me = await res.json();
-    renderInstallationScreen(me);
-    return true;
-  } catch(e) { return false; }
+  // 2. Carica addons
+  try {
+    const r = await fetch('/api/addons', { headers: { 'Authorization': 'Bearer ' + token } });
+    if (r.ok) addons = (await r.json()).addons || [];
+  } catch(_) {}
+
+  // 3. Carica info utente (per URL)
+  try {
+    const r = await fetch('/api/me', { headers: { 'Authorization': 'Bearer ' + token } });
+    if (r.ok) {
+      const me = await r.json();
+      const base = window.location.origin;
+      const httpUrl = `${base}/proxy/${me.userId}/manifest.json`;
+      const stremioUrl = `stremio://${window.location.host}/proxy/${me.userId}/manifest.json`;
+      document.getElementById('url-text').textContent = httpUrl;
+      const installLink = document.getElementById('install-link');
+      installLink.href = prov === 'nuvio' ? httpUrl : stremioUrl;
+      installLink.textContent = prov === 'nuvio' ? '📥 Install in Nuvio' : '📥 Install in Stremio';
+    }
+  } catch(_) {}
+
+  document.getElementById('prov-badge').textContent = `· ${prov === 'nuvio' ? 'Nuvio' : 'Stremio'}`;
+  document.getElementById('config-panel').setAttribute('data-prov', prov);
+
+  renderAddonList();
+
+  document.getElementById('login-panel').style.display  = 'none';
+  document.getElementById('config-panel').style.display = 'block';
 }
 
-// ── GET /api/addons ──
-async function fetchUserAddons(t) {
-  const container = document.getElementById('addons-list-container');
-  try {
-    const res = await fetch('/api/addons', { headers: { 'Authorization': 'Bearer ' + t } });
-    if (!res.ok) throw new Error();
-    
-    const data = await res.json();
-    // Mappato sulla struttura corretta del tuo server: data.addons
-    serverAddonsRaw = data.addons || []; 
-    
-    if (serverAddonsRaw.length === 0) {
-      container.innerHTML = '<p style="font-size:0.85rem; color:var(--muted)">No proxiable addons found on your account. Try syncing or adding one manually.</p>';
-      return;
-    }
-
-    renderAddonsForm(serverAddonsRaw);
-  } catch (err) {
-    // Fallback locale di emergenza in caso l'upstream Stremio/Nuvio sia temporaneamente irraggiungibile
-    serverAddonsRaw = [
-      { id: 'torrentio', name: 'Torrentio', slug: 'torrentio', transportUrl: 'https://torrentio.strem.fun/manifest.json', isProxiable: true },
-      { id: 'comet', name: 'Comet', slug: 'comet', transportUrl: 'https://comet.strem.fun/manifest.json', isProxiable: true }
-    ];
-    renderAddonsForm(serverAddonsRaw);
+// ── Render addon list ──────────────────────────────────────────────────────
+function renderAddonList() {
+  const container = document.getElementById('addon-list');
+  if (!addons.length) {
+    container.innerHTML = '<p style="font-size:.82rem;color:var(--muted)">No proxiable addons found. Try syncing your account.</p>';
+    return;
   }
-}
-
-// ── RENDERING COMPONENTI ADDON (titleTemplate & descriptionTemplate) ──
-function renderAddonsForm(addons) {
-  const container = document.getElementById('addons-list-container');
   container.innerHTML = '';
 
-  addons.forEach(addon => {
-    if (!addon.isProxiable && addon.id !== 'torrentio') return; // Salta addon non proxyabili
+  addons.filter(a => a.isProxiable).forEach(addon => {
+    const saved     = config?.addonConfigs?.find(c => c.addonId === addon.id) || {};
+    const nameVal   = saved.titleTemplate       ?? '{quality} | {source}';
+    const descVal   = saved.descriptionTemplate ?? '{filename}\n{lang_flags} {audio}\n💾 {size} · {source}';
+    const enabled   = saved.enabled !== false;
 
-    // Trova se l'addon ha già dei template salvati nella configurazione corrente del server
-    const existingConf = globalConfigObject?.addonConfigs?.find(a => a.addonId === addon.id);
-    const titleVal = existingConf ? (existingConf.titleTemplate || '') : '{quality} | {source}';
-    const descVal = existingConf ? (existingConf.descriptionTemplate || '') : '{title}\n⚡ {seeders} S';
+    const card = document.createElement('div');
+    card.className = 'addon-card';
+    card.id = `card-${addon.id}`;
 
-    const block = document.createElement('div');
-    block.className = 'addon-card';
-    block.innerHTML = `
-      <div class="addon-title">${addon.name}</div>
-      <div class="formatter-grid">
-        <div>
-          <label class="field-label" style="margin-top:0;">TITLE TEMPLATE</label>
-          <textarea id="title-${addon.id}">${titleVal}</textarea>
-        </div>
-        <div>
-          <label class="field-label" style="margin-top:0;">DESCRIPTION TEMPLATE</label>
-          <textarea id="desc-${addon.id}">${descVal}</textarea>
-        </div>
+    // Initials fallback se non c'è logo
+    const initials = (addon.name || '?').slice(0, 3).toUpperCase();
+    const logoHtml = addon.logo
+      ? `<img class="addon-logo" src="${addon.logo}" alt="" onerror="this.outerHTML='<div class=addon-logo-fallback>${initials}</div>'">`
+      : `<div class="addon-logo-fallback">${initials}</div>`;
+
+    card.innerHTML = `
+      <div class="addon-header" onclick="toggleCard('${addon.id}')">
+        ${logoHtml}
+        <span class="addon-name">${addon.name}</span>
+        <span class="addon-chevron">▶</span>
       </div>
-      <div class="file-upload-row">
-        <label class="btn-upload-label" for="file-${addon.id}">📁 Upload Custom .json</label>
-        <input type="file" id="file-${addon.id}" class="file-input" accept=".json" onchange="window.handleJsonUpload(event, '${addon.id}')">
-        <span id="status-${addon.id}" style="font-size:0.75rem; color:var(--muted)">No file chosen</span>
+      <div class="addon-body">
+
+        <!-- Enable toggle -->
+        <div class="addon-toggle">
+          <div class="toggle-track ${enabled ? 'on' : ''}" id="toggle-${addon.id}"
+               onclick="flipToggle('${addon.id}')">
+            <div class="toggle-thumb"></div>
+          </div>
+          <span class="toggle-lbl" id="toggle-lbl-${addon.id}">${enabled ? 'Enabled' : 'Disabled'}</span>
+        </div>
+
+        <!-- Templates -->
+        <div class="template-grid">
+          <div>
+            <div class="tmpl-label">Name Template <span style="color:var(--dim)">(stream.name)</span></div>
+            <textarea class="tmpl-input" id="name-${addon.id}"
+              oninput="updatePreview('${addon.id}')"
+              placeholder="{quality} | {source}">${nameVal}</textarea>
+          </div>
+          <div>
+            <div class="tmpl-label">Description Template <span style="color:var(--dim)">(stream.title)</span></div>
+            <textarea class="tmpl-input" id="desc-${addon.id}"
+              oninput="updatePreview('${addon.id}')"
+              placeholder="{filename}&#10;{lang_flags} {audio}&#10;💾 {size}">${descVal}</textarea>
+          </div>
+        </div>
+
+        <!-- Snippets per Name -->
+        <div class="snippets-section">
+          <div class="snippets-title">Name snippets</div>
+          <div class="snippets-row" id="snip-name-${addon.id}"></div>
+        </div>
+
+        <!-- Snippets per Description -->
+        <div class="snippets-section" style="margin-top:6px;">
+          <div class="snippets-title">Description snippets</div>
+          <div class="snippets-row" id="snip-desc-${addon.id}"></div>
+        </div>
+
+        <!-- Variables reference -->
+        <div class="vars-toggle" onclick="toggleVars('${addon.id}')">
+          <span id="vars-arrow-${addon.id}">▶</span>
+          <span>Available variables</span>
+        </div>
+        <div class="vars-panel" id="vars-${addon.id}">
+          <div class="vars-grid" id="vars-grid-${addon.id}"></div>
+        </div>
+
+        <!-- Preview -->
+        <div class="preview-section">
+          <div class="preview-label">Preview</div>
+          <div class="preview-box">
+            <div class="preview-name"  id="prev-name-${addon.id}">—</div>
+            <div class="preview-title" id="prev-desc-${addon.id}">—</div>
+          </div>
+        </div>
+
+        <!-- JSON upload -->
+        <div class="upload-row">
+          <label class="upload-lbl" for="file-${addon.id}">📁 Upload .json badges</label>
+          <input type="file" class="file-input" id="file-${addon.id}" accept=".json"
+            onchange="handleJson(event, '${addon.id}')">
+          <span class="upload-status" id="file-status-${addon.id}">No file chosen</span>
+        </div>
+
       </div>
     `;
-    container.appendChild(block);
+    container.appendChild(card);
+
+    // Popola snippets
+    populateSnippets(`snip-name-${addon.id}`, SNIPPETS_NAME, `name-${addon.id}`);
+    populateSnippets(`snip-desc-${addon.id}`, SNIPPETS_DESC, `desc-${addon.id}`);
+
+    // Popola variabili
+    const vGrid = document.getElementById(`vars-grid-${addon.id}`);
+    VARIABLES.forEach(v => {
+      const item = document.createElement('div');
+      item.className = 'var-item';
+      item.innerHTML = `<span class="var-name">{${v.name}}</span> <span class="var-desc">${v.desc}</span>`;
+      vGrid.appendChild(item);
+    });
+
+    // Prima preview
+    updatePreview(addon.id);
   });
 }
 
-window.handleJsonUpload = function(event, addonId) {
+function toggleCard(id) {
+  const card = document.getElementById(`card-${id}`);
+  card.classList.toggle('open');
+}
+
+function flipToggle(id) {
+  const track = document.getElementById(`toggle-${id}`);
+  const lbl   = document.getElementById(`toggle-lbl-${id}`);
+  track.classList.toggle('on');
+  lbl.textContent = track.classList.contains('on') ? 'Enabled' : 'Disabled';
+}
+
+function toggleVars(id) {
+  const panel = document.getElementById(`vars-${id}`);
+  const arrow = document.getElementById(`vars-arrow-${id}`);
+  panel.classList.toggle('open');
+  arrow.textContent = panel.classList.contains('open') ? '▼' : '▶';
+}
+
+function populateSnippets(containerId, snippets, targetId) {
+  const container = document.getElementById(containerId);
+  snippets.forEach(s => {
+    const el = document.createElement('span');
+    el.className = 'snippet';
+    el.textContent = s.label;
+    el.onclick = () => insertSnippet(targetId, s.val);
+    container.appendChild(el);
+  });
+}
+
+function insertSnippet(targetId, val) {
+  const el = document.getElementById(targetId);
+  if (!el) return;
+  const start = el.selectionStart, end = el.selectionEnd;
+  el.value = el.value.slice(0, start) + val + el.value.slice(end);
+  el.selectionStart = el.selectionEnd = start + val.length;
+  el.focus();
+  el.dispatchEvent(new Event('input'));
+}
+
+// ── Preview resolver (same logic as proxy.js resolveTemplate) ──────────────
+function resolvePreview(template, data) {
+  if (!template) return '';
+  return template.replace(/\{([^{}]+)\}/g, (_, key) => {
+    const v = data[key.trim()];
+    return v !== undefined && v !== null ? String(v) : '';
+  });
+}
+
+function updatePreview(addonId) {
+  const nameT = document.getElementById(`name-${addonId}`)?.value || '';
+  const descT = document.getElementById(`desc-${addonId}`)?.value || '';
+  const data  = { ...PREVIEW_DATA, addon: addons.find(a => a.id === addonId)?.name || 'Addon' };
+
+  document.getElementById(`prev-name-${addonId}`).textContent = resolvePreview(nameT, data) || '—';
+  document.getElementById(`prev-desc-${addonId}`).textContent = resolvePreview(descT, data) || '—';
+}
+
+// ── JSON badge upload ──────────────────────────────────────────────────────
+function handleJson(event, addonId) {
   const file = event.target.files[0];
   if (!file) return;
   const reader = new FileReader();
-  reader.onload = function(e) {
+  reader.onload = e => {
     try {
-      const parsed = JSON.parse(e.target.result);
-      document.getElementById(`status-${addonId}`).textContent = '✓ ' + file.name;
-      document.getElementById(`status-${addonId}`).style.color = 'var(--green)';
-      document.getElementById(`file-${addonId}`).setAttribute('data-json-payload', JSON.stringify(parsed));
-    } catch (err) {
-      alert('Error parsing JSON file. Check format rules.');
-      document.getElementById(`status-${addonId}`).textContent = 'Invalid JSON';
-      document.getElementById(`status-${addonId}`).style.color = '#f55';
+      JSON.parse(e.target.result);
+      document.getElementById(`file-${addonId}`).setAttribute('data-json', e.target.result);
+      document.getElementById(`file-status-${addonId}`).textContent = '✓ ' + file.name;
+      document.getElementById(`file-status-${addonId}`).style.color = 'var(--green)';
+    } catch(_) {
+      document.getElementById(`file-status-${addonId}`).textContent = '✗ Invalid JSON';
+      document.getElementById(`file-status-${addonId}`).style.color = 'var(--red)';
     }
   };
   reader.readAsText(file);
-};
+}
 
-// ── PUT /api/config (Sincronizzato al 100% con Zod schema del server) ──
-window.saveAddonConfig = async function() {
-  const saveBtn = document.getElementById('save-config-btn');
-  saveBtn.disabled = true;
-  saveBtn.textContent = 'Saving configuration...';
+// ── Save config ────────────────────────────────────────────────────────────
+async function saveConfig() {
+  const btn = document.getElementById('save-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spin"></span> Saving…';
 
-  // Costruisci l'array addonConfigs rispettando rigorosamente le proprietà Zod del backend
-  const addonConfigsPayload = serverAddonsRaw.map(addon => {
-    const customJsonEl = document.getElementById(`file-${addon.id}`);
-    const customJsonStr = customJsonEl ? customJsonEl.getAttribute('data-json-payload') : null;
-    
-    // Importa i badge personalizzati se è stato caricato un file json, altrimenti lascia vuoto
-    let customBadges = [];
-    if (customJsonStr) {
-      const parsedJson = JSON.parse(customJsonStr);
-      customBadges = Array.isArray(parsedJson.badges) ? parsedJson.badges : (Array.isArray(parsedJson) ? parsedJson : []);
+  const addonConfigs = addons.filter(a => a.isProxiable).map(addon => {
+    const toggle    = document.getElementById(`toggle-${addon.id}`);
+    const enabled   = toggle ? toggle.classList.contains('on') : true;
+    const nameT     = document.getElementById(`name-${addon.id}`)?.value || null;
+    const descT     = document.getElementById(`desc-${addon.id}`)?.value || null;
+    const jsonEl    = document.getElementById(`file-${addon.id}`);
+    const jsonStr   = jsonEl?.getAttribute('data-json');
+
+    let badges = [];
+    if (jsonStr) {
+      try {
+        const parsed = JSON.parse(jsonStr);
+        badges = Array.isArray(parsed.badges) ? parsed.badges
+               : Array.isArray(parsed)        ? parsed : [];
+      } catch(_) {}
     }
 
     return {
-      addonId: addon.id,
-      slug: addon.slug || addon.id.toLowerCase(),
-      name: addon.name,
-      transportUrl: addon.transportUrl || 'https://localhost',
-      enabled: true,
-      idPrefixes: addon.idPrefixes || [],
-      types: addon.types || ['movie', 'series'],
-      logo: addon.logo || null,
-      nameTemplate: null,
-      titleTemplate: document.getElementById(`title-${addon.id}`) ? document.getElementById(`title-${addon.id}`).value : null,
-      descriptionTemplate: document.getElementById(`desc-${addon.id}`) ? document.getElementById(`desc-${addon.id}`).value : null,
-      badges: customBadges
+      addonId:             addon.id,
+      slug:                addon.slug || addon.id.toLowerCase(),
+      name:                addon.name,
+      transportUrl:        addon.transportUrl || 'https://localhost',
+      enabled,
+      idPrefixes:          addon.idPrefixes || [],
+      types:               addon.types      || ['movie', 'series'],
+      logo:                addon.logo       || null,
+      nameTemplate:        null,
+      // NOTA: titleTemplate → sovrascrive stream.name; descriptionTemplate → stream.title
+      titleTemplate:       nameT,
+      descriptionTemplate: descT,
+      badges,
     };
   });
 
-  // Ricostruisci il corpo completo richiesto da fullConfigSchema
-  const finalPayload = {
-    globalBadges: globalConfigObject?.globalBadges || [
-      { pattern: '4k|2160p|uhd', label: '4K', priority: 1 },
-      { pattern: '1080p', label: '1080p', priority: 8 }
-    ],
-    addonConfigs: addonConfigsPayload,
-    settings: globalConfigObject?.settings || {
-      mergeStreams: false
-    }
+  const payload = {
+    globalBadges: config?.globalBadges || [],
+    addonConfigs,
+    settings:     config?.settings     || { mergeStreams: false },
   };
 
   try {
-    const res = await fetch('/api/config', {
+    const res  = await fetch('/api/config', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-      body: JSON.stringify(finalPayload)
+      body: JSON.stringify(payload),
     });
-    
     const data = await res.json();
     if (res.ok && data.success) {
-      alert('Configuration successfully validated and saved to DB!');
+      toast('Configuration saved!', 'success');
+      config = payload; // aggiorna stato locale
     } else {
-      alert('Validation Error: ' + (data.error || 'Check fields conditions'));
+      toast(data.error || 'Validation error', 'error');
       console.error(data.details);
     }
-  } catch (err) {
-    alert('Network error while performing PUT /api/config');
+  } catch(_) {
+    toast('Network error', 'error');
   } finally {
-    saveBtn.disabled = false;
-    saveBtn.textContent = '⚡ Save & Update Manifest';
-  }
-};
-
-function renderInstallationScreen(me) {
-  document.getElementById('login-card').style.display = 'none';
-  document.getElementById('install-card').style.display = 'block';
-
-  let currentP = provider;
-  try { currentP = localStorage.getItem('fm_provider') || provider; } catch(e){}
-
-  document.getElementById('provider-badge').textContent = currentP === 'nuvio' ? 'Nuvio' : 'Stremio';
-
-  const installBtn = document.getElementById('install-btn');
-  installBtn.textContent = currentP === 'nuvio' ? '📥 Install in Nuvio' : '📥 Install in Stremio';
-
-  const BASE = window.location.origin;
-  // Utilizza l'URL Master Proxy globale dell'utente definito nel tuo config.js
-  const httpUrl = `${BASE}/proxy/${me.userId}/manifest.json`;
-  const stremioUrl = `stremio://${window.location.host}/proxy/${me.userId}/manifest.json`;
-
-  installBtn.href = currentP === 'nuvio' ? httpUrl : stremioUrl; 
-  document.getElementById('url-text').textContent = httpUrl;
-}
-
-function executeLogout() {
-  try { localStorage.removeItem('fm_token'); localStorage.removeItem('fm_provider'); } catch(e){}
-  token = null; globalConfigObject = null;
-  document.getElementById('install-card').style.display = 'none';
-  document.getElementById('login-card').style.display = 'block';
-  document.getElementById('email').value = ''; document.getElementById('password').value = '';
-  switchProvider('stremio');
-}
-
-function applyEventBindings() {
-  document.getElementById('tab-stremio').addEventListener('click', () => switchProvider('stremio'));
-  document.getElementById('tab-nuvio').addEventListener('click', () => switchProvider('nuvio'));
-  document.getElementById('login-btn').addEventListener('click', triggerLogin);
-  document.getElementById('logout-btn').addEventListener('click', executeLogout);
-
-  const copyBtn = document.getElementById('copy-btn');
-  if (copyBtn) {
-    copyBtn.addEventListener('click', () => {
-      const url = document.getElementById('url-text').textContent;
-      navigator.clipboard.writeText(url).then(() => {
-        copyBtn.textContent = '✓ Copied';
-        setTimeout(() => copyBtn.textContent = 'Copy', 1800);
-      });
-    });
+    btn.disabled = false;
+    btn.textContent = '⚡ Save & Update';
   }
 }
 
-async function masterBootstrap() {
-  applyEventBindings();
-  switchProvider(savedProvider);
+// ── Copy URL ───────────────────────────────────────────────────────────────
+function copyUrl() {
+  const url = document.getElementById('url-text').textContent;
+  if (!url || url === '—') return;
+  navigator.clipboard.writeText(url).then(() => toast('URL copied!'));
+}
+
+// ── Logout ─────────────────────────────────────────────────────────────────
+function doLogout() {
+  try { localStorage.removeItem('fm_token'); localStorage.removeItem('fm_prov'); } catch(_) {}
+  token = null; config = null; addons = [];
+  document.getElementById('login-panel').style.display  = 'block';
+  document.getElementById('config-panel').style.display = 'none';
+  document.getElementById('email').value = '';
+  document.getElementById('password').value = '';
+  switchProv('stremio');
+}
+
+// ── Boot ───────────────────────────────────────────────────────────────────
+async function boot() {
+  switchProv(prov);
   if (token) {
-    const activeSession = await verifyProfile(token);
-    if (!activeSession) { try { localStorage.removeItem('fm_token'); } catch(e){} }
+    // Verifica token prima di mostrare config
+    const r = await fetch('/api/me', { headers: { 'Authorization': 'Bearer ' + token } });
+    if (r.ok) { await loadConfigScreen(); }
+    else { try { localStorage.removeItem('fm_token'); } catch(_) {} }
   }
 }
 
 if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', masterBootstrap);
+  document.addEventListener('DOMContentLoaded', boot);
 } else {
-  masterBootstrap();
+  boot();
 }
 </script>
 </body>
