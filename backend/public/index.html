@@ -122,6 +122,7 @@ textarea { font-family: monospace; font-size: 0.85rem; resize: vertical; min-hei
 
 <div class="card" id="main-container" data-provider="stremio">
   
+  <!-- ── LOGIN INTERFACE ── -->
   <div id="login-card">
     <div class="tabs">
       <button type="button" class="tab" id="tab-stremio"><img src="stremio.png" alt="" onerror="this.style.display='none'"> STREMIO</button>
@@ -136,13 +137,15 @@ textarea { font-family: monospace; font-size: 0.85rem; resize: vertical; min-hei
     <div class="hint" id="login-hint">Use your <strong>Stremio</strong> account credentials.<br>We do not store your password — only the session token.</div>
   </div>
 
+  <!-- ── CONFIG & INSTALL INTERFACE ── -->
   <div id="install-card" style="display:none;">
     <div class="provider-badge" id="provider-badge">Stremio</div>
     <div class="install-title">✓ Ready for Configuration</div>
-    <p class="install-sub">Customize your stream formatters below. When ready, install the generated manifest and <strong>move it to the top of your addon list</strong>.</p>
+    <p class="install-sub">Customize your stream formatters below. When ready, install the generated master manifest and <strong>move it to the top of your addon list</strong>.</p>
 
+    <!-- ── LISTA ADDON DINAMICI DA CONFIGURARE ── -->
     <div class="addons-section" id="addons-list-container">
-      <p style="font-size:0.85rem; color:var(--muted)">Loading active stream formatters...</p>
+      <p style="font-size:0.85rem; color:var(--muted)">Loading your active stream formatters...</p>
     </div>
 
     <button type="button" class="btn-install" id="save-config-btn" onclick="window.saveAddonConfig()">⚡ Save & Update Manifest</button>
@@ -164,7 +167,8 @@ textarea { font-family: monospace; font-size: 0.85rem; resize: vertical; min-hei
 let provider = 'stremio';
 let token = null;
 let savedProvider = 'stremio';
-let fetchedAddonsList = [];
+let serverAddonsRaw = []; // Mantiene la lista pulita ritornata dal backend
+let globalConfigObject = null; // Memorizza la config corrente del server
 
 try {
   token = localStorage.getItem('fm_token');
@@ -233,60 +237,76 @@ async function verifyProfile(t) {
   try {
     const res = await fetch('/api/me', { headers: { 'Authorization': 'Bearer ' + t } });
     if (!res.ok) return false;
-    const me = await res.json();
-    // Eseguiamo il fetch degli addon, ma andiamo avanti a prescindere dal risultato
+    
+    // 1. Scarica la configurazione globale attuale (per non sovrascrivere globalBadges e settings)
+    const configRes = await fetch('/api/config', { headers: { 'Authorization': 'Bearer ' + t } });
+    if (configRes.ok) {
+      const configData = await configRes.json();
+      globalConfigObject = configData.config;
+    }
+
+    // 2. Scarica gli addon dell'utente mappati dal backend
     await fetchUserAddons(t);
+    
+    // 3. Mostra la schermata finale passando l'oggetto profilo utente
+    const me = await res.json();
     renderInstallationScreen(me);
     return true;
-  } catch { return false; }
+  } catch(e) { return false; }
 }
 
-// ── FETCH COMPONENTI FORMATTER CON PRESET DI SICUREZZA SE FALLISCE ──
+// ── GET /api/addons ──
 async function fetchUserAddons(t) {
   const container = document.getElementById('addons-list-container');
-  const defaultPresets = [
-    { id: 'torrentio', name: 'Torrentio', title: '{quality} | {source}', body: '{title}\n⚡ {seeders} S' },
-    { id: 'comet', name: 'Comet', title: '[{quality}] {title}', body: '{size}' },
-    { id: 'streamthru', name: 'Streamthru', title: '{title}', body: 'Proxy Stream' }
-  ];
-
   try {
     const res = await fetch('/api/addons', { headers: { 'Authorization': 'Bearer ' + t } });
-    if (!res.ok) {
-      // Se risponde male (es. 404 o 500), carica i preset
-      fetchedAddonsList = defaultPresets;
-    } else {
-      fetchedAddonsList = await res.json();
-      if (!fetchedAddonsList || fetchedAddonsList.length === 0) {
-        fetchedAddonsList = defaultPresets;
-      }
+    if (!res.ok) throw new Error();
+    
+    const data = await res.json();
+    // Mappato sulla struttura corretta del tuo server: data.addons
+    serverAddonsRaw = data.addons || []; 
+    
+    if (serverAddonsRaw.length === 0) {
+      container.innerHTML = '<p style="font-size:0.85rem; color:var(--muted)">No proxiable addons found on your account. Try syncing or adding one manually.</p>';
+      return;
     }
+
+    renderAddonsForm(serverAddonsRaw);
   } catch (err) {
-    // Se fallisce del tutto la rete, carica comunque i preset anziché rompersi
-    fetchedAddonsList = defaultPresets;
+    // Fallback locale di emergenza in caso l'upstream Stremio/Nuvio sia temporaneamente irraggiungibile
+    serverAddonsRaw = [
+      { id: 'torrentio', name: 'Torrentio', slug: 'torrentio', transportUrl: 'https://torrentio.strem.fun/manifest.json', isProxiable: true },
+      { id: 'comet', name: 'Comet', slug: 'comet', transportUrl: 'https://comet.strem.fun/manifest.json', isProxiable: true }
+    ];
+    renderAddonsForm(serverAddonsRaw);
   }
-  
-  renderAddonsForm(fetchedAddonsList);
 }
 
-// ── RENDERING DEL FORM FORMATTER + FILE JSON ──
+// ── RENDERING COMPONENTI ADDON (titleTemplate & descriptionTemplate) ──
 function renderAddonsForm(addons) {
   const container = document.getElementById('addons-list-container');
   container.innerHTML = '';
 
   addons.forEach(addon => {
+    if (!addon.isProxiable && addon.id !== 'torrentio') return; // Salta addon non proxyabili
+
+    // Trova se l'addon ha già dei template salvati nella configurazione corrente del server
+    const existingConf = globalConfigObject?.addonConfigs?.find(a => a.addonId === addon.id);
+    const titleVal = existingConf ? (existingConf.titleTemplate || '') : '{quality} | {source}';
+    const descVal = existingConf ? (existingConf.descriptionTemplate || '') : '{title}\n⚡ {seeders} S';
+
     const block = document.createElement('div');
     block.className = 'addon-card';
     block.innerHTML = `
       <div class="addon-title">${addon.name}</div>
       <div class="formatter-grid">
         <div>
-          <label class="field-label" style="margin-top:0;">TITLE FORMAT</label>
-          <textarea id="title-${addon.id}">${addon.title || ''}</textarea>
+          <label class="field-label" style="margin-top:0;">TITLE TEMPLATE</label>
+          <textarea id="title-${addon.id}">${titleVal}</textarea>
         </div>
         <div>
-          <label class="field-label" style="margin-top:0;">BODY FORMAT</label>
-          <textarea id="body-${addon.id}">${addon.body || ''}</textarea>
+          <label class="field-label" style="margin-top:0;">DESCRIPTION TEMPLATE</label>
+          <textarea id="desc-${addon.id}">${descVal}</textarea>
         </div>
       </div>
       <div class="file-upload-row">
@@ -318,36 +338,68 @@ window.handleJsonUpload = function(event, addonId) {
   reader.readAsText(file);
 };
 
-// ── SALVATAGGIO CONFIGURAZIONE ED ENDPOINT DINAMICO ──
+// ── PUT /api/config (Sincronizzato al 100% con Zod schema del server) ──
 window.saveAddonConfig = async function() {
   const saveBtn = document.getElementById('save-config-btn');
   saveBtn.disabled = true;
   saveBtn.textContent = 'Saving configuration...';
 
-  const updatedPayload = fetchedAddonsList.map(addon => {
+  // Costruisci l'array addonConfigs rispettando rigorosamente le proprietà Zod del backend
+  const addonConfigsPayload = serverAddonsRaw.map(addon => {
     const customJsonEl = document.getElementById(`file-${addon.id}`);
     const customJsonStr = customJsonEl ? customJsonEl.getAttribute('data-json-payload') : null;
+    
+    // Importa i badge personalizzati se è stato caricato un file json, altrimenti lascia vuoto
+    let customBadges = [];
+    if (customJsonStr) {
+      const parsedJson = JSON.parse(customJsonStr);
+      customBadges = Array.isArray(parsedJson.badges) ? parsedJson.badges : (Array.isArray(parsedJson) ? parsedJson : []);
+    }
+
     return {
-      id: addon.id,
-      title: document.getElementById(`title-${addon.id}`).value,
-      body: document.getElementById(`body-${addon.id}`).value,
-      customConfig: customJsonStr ? JSON.parse(customJsonStr) : null
+      addonId: addon.id,
+      slug: addon.slug || addon.id.toLowerCase(),
+      name: addon.name,
+      transportUrl: addon.transportUrl || 'https://localhost',
+      enabled: true,
+      idPrefixes: addon.idPrefixes || [],
+      types: addon.types || ['movie', 'series'],
+      logo: addon.logo || null,
+      nameTemplate: null,
+      titleTemplate: document.getElementById(`title-${addon.id}`) ? document.getElementById(`title-${addon.id}`).value : null,
+      descriptionTemplate: document.getElementById(`desc-${addon.id}`) ? document.getElementById(`desc-${addon.id}`).value : null,
+      badges: customBadges
     };
   });
 
-  try {
-    const res = await fetch('/api/config/save', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-      body: JSON.stringify({ addons: updatedPayload })
-    });
-    if (res.ok) {
-      alert('Configuration successfully updated! Manifest updated.');
-    } else {
-      alert('Failed to save configuration rules on server.');
+  // Ricostruisci il corpo completo richiesto da fullConfigSchema
+  const finalPayload = {
+    globalBadges: globalConfigObject?.globalBadges || [
+      { pattern: '4k|2160p|uhd', label: '4K', priority: 1 },
+      { pattern: '1080p', label: '1080p', priority: 8 }
+    ],
+    addonConfigs: addonConfigsPayload,
+    settings: globalConfigObject?.settings || {
+      mergeStreams: false
     }
-  } catch {
-    alert('Network error while saving settings.');
+  };
+
+  try {
+    const res = await fetch('/api/config', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      body: JSON.stringify(finalPayload)
+    });
+    
+    const data = await res.json();
+    if (res.ok && data.success) {
+      alert('Configuration successfully validated and saved to DB!');
+    } else {
+      alert('Validation Error: ' + (data.error || 'Check fields conditions'));
+      console.error(data.details);
+    }
+  } catch (err) {
+    alert('Network error while performing PUT /api/config');
   } finally {
     saveBtn.disabled = false;
     saveBtn.textContent = '⚡ Save & Update Manifest';
@@ -362,12 +414,12 @@ function renderInstallationScreen(me) {
   try { currentP = localStorage.getItem('fm_provider') || provider; } catch(e){}
 
   document.getElementById('provider-badge').textContent = currentP === 'nuvio' ? 'Nuvio' : 'Stremio';
-  document.getElementById('provider-name-label').textContent = currentP === 'nuvio' ? 'Nuvio' : 'Stremio';
 
   const installBtn = document.getElementById('install-btn');
   installBtn.textContent = currentP === 'nuvio' ? '📥 Install in Nuvio' : '📥 Install in Stremio';
 
   const BASE = window.location.origin;
+  // Utilizza l'URL Master Proxy globale dell'utente definito nel tuo config.js
   const httpUrl = `${BASE}/proxy/${me.userId}/manifest.json`;
   const stremioUrl = `stremio://${window.location.host}/proxy/${me.userId}/manifest.json`;
 
@@ -377,7 +429,7 @@ function renderInstallationScreen(me) {
 
 function executeLogout() {
   try { localStorage.removeItem('fm_token'); localStorage.removeItem('fm_provider'); } catch(e){}
-  token = null;
+  token = null; globalConfigObject = null;
   document.getElementById('install-card').style.display = 'none';
   document.getElementById('login-card').style.display = 'block';
   document.getElementById('email').value = ''; document.getElementById('password').value = '';
