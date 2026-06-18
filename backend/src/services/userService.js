@@ -1,18 +1,3 @@
-// services/userService.js - User persistence via Supabase for Foxmatter
-//
-// Supabase table: users
-//   id                uuid primary key default gen_random_uuid()
-//   provider          text not null default 'stremio'   -- 'stremio' | 'nuvio'
-//   provider_id       text not null                     -- stremio _id or nuvio user UUID
-//   email             text not null
-//   name              text
-//   stremio_auth_key  text
-//   nuvio_access_token  text
-//   nuvio_refresh_token text
-//   nuvio_user_id     text
-//   created_at        timestamptz default now()
-//   updated_at        timestamptz default now()
-//   unique(provider, provider_id)
 
 const { createClient } = require('@supabase/supabase-js');
 const { logger } = require('../utils/logger');
