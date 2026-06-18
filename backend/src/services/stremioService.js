@@ -51,24 +51,43 @@ async function stremioAuth(email, password) {
 
 /**
  * Fetch all installed addons for a user.
- * Utilizza le chiamate POST ufficiali di Stremio per evitare 502/Timeout.
+ * Utilizza le chiamate POST ufficiali di Stremio e fallback aggressivi per evitare 502/Timeout.
  */
 async function fetchUserAddons(authKey) {
   try {
-    // L'API di Stremio richiede POST per recuperare il profilo utente
+    // 1. L'API di Stremio richiede POST per recuperare il profilo utente
     const profileRes = await stremioClient.post('/api/profile', { authKey });
-    const userId = profileRes.data.result?._id;
-
-    if (!userId) {
-      throw new Error('Could not retrieve user ID from Stremio profile');
+    
+    // Intercettazione dell'errore di sessione/auth erogato da Stremio
+    if (profileRes.data?.error) {
+      logger.error(`Stremio API profile error: ${profileRes.data.error}`);
+      return { success: false, error: `Stremio Auth Error: ${profileRes.data.error}`, addons: [] };
     }
 
-    // L'API di Stremio richiede POST con payload JSON anche per la collezione addon
+    const result = profileRes.data?.result;
+    if (!result) {
+      throw new Error('Invalid response structure from Stremio profile');
+    }
+
+    // FALLBACK AGGRESSIVO: Estrae l'ID utente in qualunque modo sia strutturato nel payload
+    const userId = result._id || result.id || result.user?._id || result.user?.id;
+
+    if (!userId) {
+      logger.error('Stremio profile payload senza ID identificativo valido:', JSON.stringify(profileRes.data));
+      throw new Error('Could not identify user ID from Stremio profile');
+    }
+
+    // 2. L'API di Stremio richiede POST con payload JSON anche per la collezione addon
     const response = await stremioClient.post('/api/addonCollectionGet', {
       authKey,
       type: 'User',
       id: userId,
     });
+
+    if (response.data?.error) {
+      logger.error(`Stremio addonCollectionGet error: ${response.data.error}`);
+      return { success: false, error: response.data.error, addons: [] };
+    }
 
     const collection = response.data.result?.addons || [];
     
@@ -143,7 +162,7 @@ function normalizeAddon(addon) {
   const manifest = addon.manifest || {};
   const resources = manifest.resources || [];
   
-  // Normalizzazione robusta delle risorse (accetta stringhe o oggetti)
+  // Normalizzazione robusta delle risorse (accetta stringhe o oggetti strutturati)
   const hasStreamResource = resources.some(r => {
     if (typeof r === 'string') return r === 'stream';
     if (r && typeof r === 'object') return r.name === 'stream';
