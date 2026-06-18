@@ -8,36 +8,45 @@ function parseTemplate(template, ctx) {
   
   // Risolve le espressioni tra graffe { ... }
   return template.replace(/\{([^{}]+)\}/g, (match, expression) => {
-    return evaluateExpression(expression.trim(), ctx) ?? '';
+    const result = evaluateExpression(expression.trim(), ctx);
+    return result !== undefined && result !== null ? result : '';
   });
 }
 
 function evaluateExpression(expr, ctx) {
-  // Gestione prioritaria degli OR
+  // Gestione OR
   if (expr.includes('::or::')) {
     const parts = expr.split('::or::');
     for (const p of parts) {
       const res = evaluateExpression(p.trim(), ctx);
-      if (res !== '' && res !== null && res !== undefined) return res;
+      if (res !== '' && res !== null && res !== undefined && res !== false) {
+        return res;
+      }
     }
     return '';
   }
 
   const parts = expr.split('::');
-  let val = getPath(ctx, parts[0].trim());
+  const path = parts[0].trim();
+  let val = getPath(ctx, path);
 
-  // Elaborazione pipeline (::)
+  // Se il valore non esiste e non ci sono operazioni, restituisci vuoto
+  if (parts.length === 1) {
+    return val !== undefined && val !== null && val !== '' ? val : '';
+  }
+
+  // Elaborazione pipeline
   for (let i = 1; i < parts.length; i++) {
     const part = parts[i].trim();
 
-    // 1. Condizionali
+    // CONDIZIONALI
     // Formato: operatore["valore_vero"||"valore_falso"]
-    // Formato alternativo: operatore["valore"]
-    const condMatch = part.match(/^(exists|~|>|<|=|>=|<=)(?:(.*?))?\["(.*?)(?:"\s*\|\|\s*"(.*?)")?\]$/);
+    // o: operatore["valore"]
+    const condMatch = part.match(/^(exists|~|>|<|=|>=|<=)(?:([^[]*))?\["(.*?)"(?:\s*\|\|\s*"(.*?)")?\]$/);
     if (condMatch) {
       const type = condMatch[1];
-      const condVal = condMatch[2] || '';
-      const trueVal = condMatch[3];
+      const condVal = (condMatch[2] || '').trim();
+      const trueVal = condMatch[3] || '';
       const falseVal = condMatch[4] || '';
       
       let met = false;
@@ -46,7 +55,7 @@ function evaluateExpression(expr, ctx) {
       
       switch(type) {
         case 'exists':
-          met = (val !== undefined && val !== null && val !== '');
+          met = (val !== undefined && val !== null && val !== '' && val !== false);
           break;
         case '~':
           met = strVal.toLowerCase().includes(condVal.toLowerCase());
@@ -68,10 +77,19 @@ function evaluateExpression(expr, ctx) {
           break;
       }
       
-      return met ? trueVal : falseVal;
+      // Se la condizione è vera, restituisci il valore vero
+      if (met) {
+        return trueVal;
+      }
+      // Se è falsa e c'è un valore falso, restituiscilo
+      if (falseVal !== '') {
+        return falseVal;
+      }
+      // Altrimenti restituisci vuoto
+      return '';
     }
 
-    // 2. Trasformazioni
+    // TRASFORMAZIONI
     if (part === 'bytes') {
       const b = parseFloat(val);
       if (isNaN(b) || b === 0) {
@@ -86,9 +104,6 @@ function evaluateExpression(expr, ctx) {
     } else if (part === 'join') {
       if (Array.isArray(val)) {
         val = val.join(' ');
-      } else if (typeof val === 'string') {
-        // Se è una stringa, non fare nulla
-        val = val;
       }
     } else if (part.startsWith('join(')) {
       const m = part.match(/join\(['"](.*?)['"]\)/);
@@ -103,17 +118,23 @@ function evaluateExpression(expr, ctx) {
     }
   }
 
-  return val ?? '';
+  // Se alla fine il valore è undefined o null, restituisci stringa vuota
+  return val !== undefined && val !== null ? val : '';
 }
 
 function getPath(obj, path) {
-  return path.split('.').reduce((o, k) => (o && o[k] !== undefined ? o[k] : undefined), obj);
+  return path.split('.').reduce((o, k) => {
+    if (o && o[k] !== undefined && o[k] !== null) {
+      return o[k];
+    }
+    return undefined;
+  }, obj);
 }
 
 function buildStreamContext(stream, addonConfig) {
   return {
     stream: stream,
-    service: { name: stream.serviceName || stream.name },
+    service: { name: stream.serviceName || stream.service || stream.name },
     addon: { name: addonConfig?.name || addonConfig?.slug }
   };
 }
