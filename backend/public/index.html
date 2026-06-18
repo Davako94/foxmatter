@@ -164,7 +164,7 @@ textarea { font-family: monospace; font-size: 0.85rem; resize: vertical; min-hei
 let provider = 'stremio';
 let token = null;
 let savedProvider = 'stremio';
-let fetchedAddonsList = []; // Mantiene in memoria gli addon caricati
+let fetchedAddonsList = [];
 
 try {
   token = localStorage.getItem('fm_token');
@@ -234,32 +234,39 @@ async function verifyProfile(t) {
     const res = await fetch('/api/me', { headers: { 'Authorization': 'Bearer ' + t } });
     if (!res.ok) return false;
     const me = await res.json();
+    // Eseguiamo il fetch degli addon, ma andiamo avanti a prescindere dal risultato
     await fetchUserAddons(t);
     renderInstallationScreen(me);
     return true;
   } catch { return false; }
 }
 
-// ── FETCH COMPONENTI FORMATTER AGGIUNTIVI DAL BACKEND ──
+// ── FETCH COMPONENTI FORMATTER CON PRESET DI SICUREZZA SE FALLISCE ──
 async function fetchUserAddons(t) {
   const container = document.getElementById('addons-list-container');
+  const defaultPresets = [
+    { id: 'torrentio', name: 'Torrentio', title: '{quality} | {source}', body: '{title}\n⚡ {seeders} S' },
+    { id: 'comet', name: 'Comet', title: '[{quality}] {title}', body: '{size}' },
+    { id: 'streamthru', name: 'Streamthru', title: '{title}', body: 'Proxy Stream' }
+  ];
+
   try {
     const res = await fetch('/api/addons', { headers: { 'Authorization': 'Bearer ' + t } });
-    if (!res.ok) throw new Error();
-    fetchedAddonsList = await res.json(); // Array di addon: [{id: 'torrentio', name: 'Torrentio', title: '...', body: '...'}, ...]
-    
-    // Se vuoto, iniettiamo dei preset standard di sicurezza (Torrentio, Comet, Streamthru)
-    if (!fetchedAddonsList || fetchedAddonsList.length === 0) {
-      fetchedAddonsList = [
-        { id: 'torrentio', name: 'Torrentio', title: '{quality} | {source}', body: '{title}\n⚡ {seeders} S' },
-        { id: 'comet', name: 'Comet', title: '[{quality}] {title}', body: '{size}' },
-        { id: 'streamthru', name: 'Streamthru', title: '{title}', body: 'Proxy Stream' }
-      ];
+    if (!res.ok) {
+      // Se risponde male (es. 404 o 500), carica i preset
+      fetchedAddonsList = defaultPresets;
+    } else {
+      fetchedAddonsList = await res.json();
+      if (!fetchedAddonsList || fetchedAddonsList.length === 0) {
+        fetchedAddonsList = defaultPresets;
+      }
     }
-    renderAddonsForm(fetchedAddonsList);
   } catch (err) {
-    container.innerHTML = '<p style="color:#f55; font-size:0.85rem;">Failed to fetch active addons configuration templates.</p>';
+    // Se fallisce del tutto la rete, carica comunque i preset anziché rompersi
+    fetchedAddonsList = defaultPresets;
   }
+  
+  renderAddonsForm(fetchedAddonsList);
 }
 
 // ── RENDERING DEL FORM FORMATTER + FILE JSON ──
@@ -301,7 +308,6 @@ window.handleJsonUpload = function(event, addonId) {
       const parsed = JSON.parse(e.target.result);
       document.getElementById(`status-${addonId}`).textContent = '✓ ' + file.name;
       document.getElementById(`status-${addonId}`).style.color = 'var(--green)';
-      // Conserviamo temporaneamente l'oggetto caricato nel dataset dell'elemento
       document.getElementById(`file-${addonId}`).setAttribute('data-json-payload', JSON.stringify(parsed));
     } catch (err) {
       alert('Error parsing JSON file. Check format rules.');
@@ -312,7 +318,7 @@ window.handleJsonUpload = function(event, addonId) {
   reader.readAsText(file);
 };
 
-// ── SALVATAGGIO CONFIGURAZIONE E UPDATE MANIFEST PROXY ──
+// ── SALVATAGGIO CONFIGURAZIONE ED ENDPOINT DINAMICO ──
 window.saveAddonConfig = async function() {
   const saveBtn = document.getElementById('save-config-btn');
   saveBtn.disabled = true;
