@@ -2,7 +2,6 @@
 
 /**
  * Risolve un template AIOStreams-compatibile
- * Supporta tutte le funzionalità del formatter AIOStreams
  */
 function parseTemplate(template, ctx) {
   if (!template || typeof template !== 'string') return '';
@@ -31,50 +30,48 @@ function evaluateExpression(expr, ctx) {
   for (let i = 1; i < parts.length; i++) {
     const part = parts[i].trim();
 
-    // 1. Condizionali compatti
+    // 1. Condizionali
     // Formato: operatore["valore_vero"||"valore_falso"]
-    const condMatch = part.match(/^(exists|~|>|<|=|>=|<=)?(?:(.*?))?\["(.*?)"\s*\|\|\s*"(.*?)"\]$/);
+    // Formato alternativo: operatore["valore"]
+    const condMatch = part.match(/^(exists|~|>|<|=|>=|<=)(?:(.*?))?\["(.*?)(?:"\s*\|\|\s*"(.*?)")?\]$/);
     if (condMatch) {
-      const type = condMatch[1] || 'exists';
+      const type = condMatch[1];
       const condVal = condMatch[2] || '';
       const trueVal = condMatch[3];
-      const falseVal = condMatch[4];
+      const falseVal = condMatch[4] || '';
       
       let met = false;
+      const strVal = String(val ?? '');
+      const numVal = parseFloat(val);
+      
       switch(type) {
         case 'exists':
           met = (val !== undefined && val !== null && val !== '');
           break;
         case '~':
-          met = String(val ?? '').toLowerCase().includes(condVal.toLowerCase());
+          met = strVal.toLowerCase().includes(condVal.toLowerCase());
           break;
         case '>':
-          met = parseFloat(val) > parseFloat(condVal);
+          met = !isNaN(numVal) && numVal > parseFloat(condVal);
           break;
         case '<':
-          met = parseFloat(val) < parseFloat(condVal);
+          met = !isNaN(numVal) && numVal < parseFloat(condVal);
           break;
         case '>=':
-          met = parseFloat(val) >= parseFloat(condVal);
+          met = !isNaN(numVal) && numVal >= parseFloat(condVal);
           break;
         case '<=':
-          met = parseFloat(val) <= parseFloat(condVal);
+          met = !isNaN(numVal) && numVal <= parseFloat(condVal);
           break;
         case '=':
-          met = String(val) === condVal;
+          met = strVal === condVal;
           break;
       }
       
       return met ? trueVal : falseVal;
     }
 
-    // 2. Condizionale esistenza (semplice)
-    if (part === 'exists') {
-      // Se arriva qui, è un esistenza senza vero/falso
-      return val !== undefined && val !== null && val !== '' ? val : '';
-    }
-
-    // 3. Trasformazioni
+    // 2. Trasformazioni
     if (part === 'bytes') {
       const b = parseFloat(val);
       if (isNaN(b) || b === 0) {
@@ -87,28 +84,21 @@ function evaluateExpression(expr, ctx) {
         val = Math.round(b/1e3) + ' KB';
       }
     } else if (part === 'join') {
-      // join senza argomenti usa spazio
       if (Array.isArray(val)) {
         val = val.join(' ');
+      } else if (typeof val === 'string') {
+        // Se è una stringa, non fare nulla
+        val = val;
       }
-    } else if (part.startsWith('join')) {
-      // join con separatore personalizzato
-      const m = part.match(/join\('(.*?)'\)/);
+    } else if (part.startsWith('join(')) {
+      const m = part.match(/join\(['"](.*?)['"]\)/);
       if (m && Array.isArray(val)) {
         val = val.join(m[1]);
-      } else if (m && typeof val === 'string') {
-        val = val.split(' ').join(m[1]);
       }
-    } else if (part.startsWith('replace')) {
-      const m = part.match(/replace\('(.*?)','(.*?)'\)/);
+    } else if (part.startsWith('replace(')) {
+      const m = part.match(/replace\(['"](.*?)['"],\s*['"](.*?)['"]\)/);
       if (m) {
-        val = String(val ?? '').split(m[1]).join(m[2]);
-      }
-    } else if (part.startsWith('replace')) {
-      // Formato alternativo: replace('old','new')
-      const m = part.match(/replace\('(.*?)','(.*?)'\)/);
-      if (m) {
-        val = String(val ?? '').split(m[1]).join(m[2]);
+        val = strVal.split(m[1]).join(m[2]);
       }
     }
   }
@@ -123,7 +113,7 @@ function getPath(obj, path) {
 function buildStreamContext(stream, addonConfig) {
   return {
     stream: stream,
-    service: { name: stream.name },
+    service: { name: stream.serviceName || stream.name },
     addon: { name: addonConfig?.name || addonConfig?.slug }
   };
 }
