@@ -1,14 +1,31 @@
+# render.yaml — Deploy Foxmatter to Render.com (free tier)
 services:
   - type: web
-    name: foxmatter-backend
+    name: foxmatter
     runtime: node
     plan: free
+    rootDir: backend
     buildCommand: npm install
-    startCommand: npm start
+    startCommand: node src/index.js
+    healthCheckPath: /health
     envVars:
-      - key: SUPABASE_URL
-        sync: false
-      - key: SUPABASE_ANON_KEY
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: BASE_URL
         sync: false
       - key: JWT_SECRET
         generateValue: true
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_KEY
+        sync: false
+      - key: STREMIO_API_BASE
+        value: https://api.strem.io
+      - key: RATE_LIMIT_WINDOW_MS
+        value: 900000
+      - key: RATE_LIMIT_MAX
+        value: 200
+      - key: PROXY_CACHE_TTL
+        value: 300
