@@ -24,6 +24,16 @@ body {
 .logo-row { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
 .logo-icon { font-size: 2.2rem; }
 .logo-text { font-size: 1.9rem; font-weight: 800; letter-spacing: -0.5px; }
+
+.foxmatter-brand {
+  font-family: 'Courier New', monospace;
+  font-size: 2.3rem;
+  font-weight: 900;
+  letter-spacing: 4px;
+  color: #00ff88;
+  text-shadow: 0 0 5px #00ff88, 0 0 15px #00ff88, 0 0 30px #00ff88;
+}
+
 .tagline { color: var(--muted); font-size: 0.9rem; margin-bottom: 40px; text-align: center; }
 
 /* ── Card ── */
@@ -37,6 +47,8 @@ body {
 .tabs {
   display: grid; grid-template-columns: 1fr 1fr;
   gap: 8px; margin-bottom: 28px;
+  position: relative;
+  z-index: 100;
 }
 .tab {
   padding: 11px; border-radius: 8px; border: 1.5px solid var(--border);
@@ -44,6 +56,8 @@ body {
   font-size: 0.9rem; font-weight: 600; color: var(--muted);
   transition: all 0.18s; display: flex; align-items: center;
   justify-content: center; gap: 7px;
+  position: relative;
+  z-index: 101;
 }
 .tab:hover { border-color: #444; color: var(--text); }
 .tab.active-stremio {
@@ -53,6 +67,11 @@ body {
 .tab.active-nuvio {
   border-color: var(--nuvio); color: var(--nuvio);
   background: var(--nuvio-glow); box-shadow: 0 0 0 3px var(--nuvio-glow);
+}
+.tab img {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
 }
 .tab-icon { font-size: 1.1rem; }
 
@@ -161,8 +180,7 @@ input:focus { border-color: var(--accent, #555); }
 <body>
 
 <div class="logo-row">
-  <span class="logo-icon">🦊</span>
-  <span class="logo-text">Foxmatter</span>
+  <span class="logo-text foxmatter-brand">FOXMATTER</span>
 </div>
 <p class="tagline">Badge e formattazione stream · Stremio & Nuvio</p>
 
@@ -171,11 +189,13 @@ input:focus { border-color: var(--accent, #555); }
 
   <!-- Provider tabs -->
   <div class="tabs">
-    <button class="tab active-stremio" id="tab-stremio" onclick="setProvider('stremio')">
-      <span class="tab-icon">🟣</span> STREMIO
+    <button type="button" class="tab active-stremio" id="tab-stremio">
+      <img src="stremio.png" alt="Stremio">
+      STREMIO
     </button>
-    <button class="tab" id="tab-nuvio" onclick="setProvider('nuvio')">
-      <span class="tab-icon">🦊</span> NUVIO
+    <button type="button" class="tab" id="tab-nuvio">
+      <img src="nuvio.png" alt="Nuvio">
+      NUVIO
     </button>
   </div>
 
@@ -236,9 +256,21 @@ let savedProvider = localStorage.getItem('fm_provider') || 'stremio';
 
 // ── Boot ───────────────────────────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded', async () => {
+  setProvider(savedProvider);
+
+  document
+    .getElementById('tab-stremio')
+    .addEventListener('click', () => setProvider('stremio'));
+
+  document
+    .getElementById('tab-nuvio')
+    .addEventListener('click', () => setProvider('nuvio'));
+
   if (token) {
     provider = savedProvider;
+
     const ok = await fetchMe(token);
+
     if (!ok) {
       localStorage.removeItem('fm_token');
       localStorage.removeItem('fm_provider');
@@ -250,6 +282,19 @@ window.addEventListener('DOMContentLoaded', async () => {
 // ── Provider tab switch ────────────────────────────────────────────────────
 function setProvider(p) {
   provider = p;
+
+  localStorage.setItem('fm_provider', p);
+
+  document.body.classList.remove(
+    'stremio-active',
+    'nuvio-active'
+  );
+
+  document.body.classList.add(
+    p === 'stremio'
+      ? 'stremio-active'
+      : 'nuvio-active'
+  );
 
   // Tabs
   document.getElementById('tab-stremio').className =
@@ -338,12 +383,14 @@ function showInstallCard(me) {
   document.getElementById('login-card').style.display   = 'none';
   document.getElementById('install-card').style.display = 'block';
 
-  const p = me.provider || savedProvider;
+  const p = localStorage.getItem('fm_provider') || provider;
 
   // Badge
   const badge = document.getElementById('provider-badge');
   badge.className = 'provider-badge ' + (p === 'nuvio' ? 'badge-nuvio' : 'badge-stremio');
-  badge.textContent = p === 'nuvio' ? '🦊 Nuvio' : '🟣 Stremio';
+  badge.innerHTML = p === 'nuvio'
+    ? '<img src="nuvio.png" width="16"> Nuvio'
+    : '<img src="stremio.png" width="16"> Stremio';
 
   // Label
   document.getElementById('provider-name-label').textContent =
@@ -375,7 +422,8 @@ function doLogout() {
   document.getElementById('login-card').style.display   = 'block';
   document.getElementById('email').value    = '';
   document.getElementById('password').value = '';
-  setProvider('stremio'); // reset to default
+  savedProvider = 'stremio';
+  setProvider('stremio');
 }
 
 // ── Copy URL ───────────────────────────────────────────────────────────────
