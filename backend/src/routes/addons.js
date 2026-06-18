@@ -1,40 +1,42 @@
-// routes/addons.js - Stremio addon discovery & management for Foxmatter
+// routes/addons.js - Addon discovery per Stremio e Nuvio
 const express = require('express');
-const router = express.Router();
-const { authenticate } = require('../middleware/auth');
-const { asyncHandler } = require('../middleware/errorHandler');
-const { fetchUserAddons, fetchAddonManifest } = require('../services/stremioService');
+const router  = express.Router();
+const { authenticate }            = require('../middleware/auth');
+const { asyncHandler }            = require('../middleware/errorHandler');
+const { fetchUserAddons, fetchAddonManifest, normalizeAddon } = require('../services/stremioService');
+const { fetchNuvioAddons }        = require('../services/nuvioService');
 const { getUserConfig, saveUserConfig } = require('../services/configService');
-const { getUserById } = require('../services/userService');
-const { logger } = require('../utils/logger');
+const { getUserById }             = require('../services/userService');
+const { logger }                  = require('../utils/logger');
 
 const BASE_URL = process.env.BASE_URL || 'http://localhost:3001';
 
-// All addon routes require a valid JWT
 router.use(authenticate);
 
 // ─── GET /api/addons ───────────────────────────────────────────────────────
-// Returns the user's installed Stremio addons, merged with any local config.
 router.get('/', asyncHandler(async (req, res) => {
   const user = await getUserById(req.user.userId);
+  if (!user) return res.status(404).json({ error: 'Utente non trovato' });
 
-  if (!user?.stremioAuthKey) {
-    return res.status(400).json({
-      error: 'No Stremio auth key stored for this account. Please re-login.',
-    });
+  let result;
+
+  if (user.provider === 'nuvio') {
+    if (!user.nuvioAccessToken) {
+      return res.status(400).json({ error: 'Token Nuvio mancante. Effettua di nuovo il login.' });
+    }
+    result = await fetchNuvioAddons(user.nuvioAccessToken, user.nuvioUserId);
+  } else {
+    if (!user.stremioAuthKey) {
+      return res.status(400).json({ error: 'Auth key Stremio mancante. Effettua di nuovo il login.' });
+    }
+    result = await fetchUserAddons(user.stremioAuthKey);
   }
-
-  const result = await fetchUserAddons(user.stremioAuthKey);
 
   if (!result.success) {
-    return res.status(502).json({
-      error: 'Could not fetch addons from Stremio',
-      detail: result.error,
-    });
+    return res.status(502).json({ error: 'Impossibile recuperare gli addon', detail: result.error });
   }
 
-  // Annotate each addon with whether it's currently configured in Foxmatter
-  const config = await getUserConfig(req.user.userId);
+  const config       = await getUserConfig(req.user.userId);
   const configuredIds = new Set((config?.addonConfigs || []).map(a => a.addonId));
 
   const annotated = result.addons.map(addon => ({
@@ -45,178 +47,173 @@ router.get('/', asyncHandler(async (req, res) => {
       : null,
   }));
 
+  res.json({ addons: annotated, total: annotated.length, provider: user.provider });
+}));
+
+// ─── POST /api/addons/sync ─────────────────────────────────────────────────
+// Risincronizza gli addon dal provider e li aggiunge alla config se nuovi
+router.post('/sync', asyncHandler(async (req, res) => {
+  const user = await getUserById(req.user.userId);
+  if (!user) return res.status(404).json({ error: 'Utente non trovato' });
+
+  let result;
+  if (user.provider === 'nuvio') {
+    result = await fetchNuvioAddons(user.nuvioAccessToken, user.nuvioUserId);
+  } else {
+    result = await fetchUserAddons(user.stremioAuthKey);
+  }
+
+  if (!result.success) {
+    return res.status(502).json({ error: 'Sync fallita', detail: result.error });
+  }
+
+  const currentConfig = await getUserConfig(req.user.userId) || {
+    globalBadges: [], addonConfigs: [], settings: {},
+  };
+
+  const existingIds = new Set(currentConfig.addonConfigs.map(a => a.addonId));
+  const newAddons   = result.addons
+    .filter(a => !existingIds.has(a.id) && a.isProxiable)
+    .map(addon => ({
+      addonId:             addon.id,
+      slug:                addon.slug,
+      name:                addon.name,
+      transportUrl:        addon.transportUrl,
+      enabled:             true,
+      idPrefixes:          addon.idPrefixes,
+      types:               addon.types,
+      logo:                addon.logo,
+      nameTemplate:        null,
+      titleTemplate:       null,
+      descriptionTemplate: null,
+      badges:              [],
+    }));
+
+  const updatedConfig = {
+    ...currentConfig,
+    addonConfigs: [...currentConfig.addonConfigs, ...newAddons],
+  };
+
+  await saveUserConfig(req.user.userId, updatedConfig);
+
   res.json({
-    addons: annotated,
-    total: annotated.length,
-    proxiable: annotated.filter(a => a.isProxiable).length,
+    success: true,
+    total:   result.addons.length,
+    added:   newAddons.length,
+    addons:  result.addons,
   });
 }));
 
 // ─── GET /api/addons/:slug/manifest ───────────────────────────────────────
-// Fetch and return the live manifest of a specific upstream addon.
 router.get('/:slug/manifest', asyncHandler(async (req, res) => {
-  const { slug } = req.params;
-
-  const config = await getUserConfig(req.user.userId);
-  const addonConf = config?.addonConfigs?.find(a => a.slug === slug);
+  const config    = await getUserConfig(req.user.userId);
+  const addonConf = config?.addonConfigs?.find(a => a.slug === req.params.slug);
 
   if (!addonConf?.transportUrl) {
-    return res.status(404).json({ error: 'Addon not found in your configuration' });
+    return res.status(404).json({ error: 'Addon non trovato nella configurazione' });
   }
 
   const result = await fetchAddonManifest(addonConf.transportUrl);
-
   if (!result.success) {
-    return res.status(502).json({
-      error: 'Could not reach upstream addon',
-      detail: result.error,
-    });
+    return res.status(502).json({ error: 'Upstream non raggiungibile', detail: result.error });
   }
 
   res.json({ manifest: result.manifest });
 }));
 
-// ─── POST /api/addons/:slug/enable ────────────────────────────────────────
-router.post('/:slug/enable', asyncHandler(async (req, res) => {
-  await setAddonEnabled(req.user.userId, req.params.slug, true);
+// ─── POST /api/addons/:slug/enable | /disable ─────────────────────────────
+router.post('/:slug/enable',  asyncHandler(async (req, res) => {
+  await setEnabled(req.user.userId, req.params.slug, true);
   res.json({ success: true, slug: req.params.slug, enabled: true });
 }));
 
-// ─── POST /api/addons/:slug/disable ───────────────────────────────────────
 router.post('/:slug/disable', asyncHandler(async (req, res) => {
-  await setAddonEnabled(req.user.userId, req.params.slug, false);
+  await setEnabled(req.user.userId, req.params.slug, false);
   res.json({ success: true, slug: req.params.slug, enabled: false });
 }));
 
 // ─── DELETE /api/addons/:slug ─────────────────────────────────────────────
-// Remove an addon from the user's Foxmatter configuration entirely.
 router.delete('/:slug', asyncHandler(async (req, res) => {
-  const { slug } = req.params;
   const config = await getUserConfig(req.user.userId);
-
-  if (!config) {
-    return res.status(404).json({ error: 'No configuration found' });
-  }
+  if (!config) return res.status(404).json({ error: 'Configurazione non trovata' });
 
   const before = config.addonConfigs?.length || 0;
-  config.addonConfigs = (config.addonConfigs || []).filter(a => a.slug !== slug);
-  const after = config.addonConfigs.length;
+  config.addonConfigs = (config.addonConfigs || []).filter(a => a.slug !== req.params.slug);
 
-  if (before === after) {
-    return res.status(404).json({ error: `Addon "${slug}" not found in your configuration` });
+  if (config.addonConfigs.length === before) {
+    return res.status(404).json({ error: `Addon "${req.params.slug}" non trovato` });
   }
 
   await saveUserConfig(req.user.userId, config);
-
-  logger.info(`User ${req.user.userId} removed addon ${slug}`);
-  res.json({ success: true, removed: slug });
+  res.json({ success: true, removed: req.params.slug });
 }));
 
-// ─── POST /api/addons/add ─────────────────────────────────────────────────
-// Manually add an addon by transport URL (for custom/unlisted addons).
+// ─── POST /api/addons/add (manuale via URL) ────────────────────────────────
 router.post('/add', asyncHandler(async (req, res) => {
   const { transportUrl, name } = req.body;
+  if (!transportUrl) return res.status(400).json({ error: 'transportUrl obbligatorio' });
 
-  if (!transportUrl || typeof transportUrl !== 'string') {
-    return res.status(400).json({ error: 'transportUrl is required' });
-  }
-
-  // Fetch the manifest to validate the URL and get addon info
   const manifestResult = await fetchAddonManifest(transportUrl);
   if (!manifestResult.success) {
-    return res.status(400).json({
-      error: 'Could not reach addon at the provided URL',
-      detail: manifestResult.error,
-    });
+    return res.status(400).json({ error: 'URL addon non raggiungibile', detail: manifestResult.error });
   }
 
   const manifest = manifestResult.manifest;
-  const { normalizeAddon } = require('../services/stremioService');
-
-  const addon = normalizeAddon({
+  const addon    = normalizeAddon({
     transportUrl,
     manifest: { ...manifest, name: name || manifest.name },
   });
 
-  // Add to user config if not already present
   const config = await getUserConfig(req.user.userId) || {
-    globalBadges: [],
-    addonConfigs: [],
-    settings: {},
+    globalBadges: [], addonConfigs: [], settings: {},
   };
 
-  const alreadyExists = config.addonConfigs.some(a => a.addonId === addon.id);
-  if (alreadyExists) {
-    return res.status(409).json({ error: 'Addon is already in your configuration' });
+  if (config.addonConfigs.some(a => a.addonId === addon.id)) {
+    return res.status(409).json({ error: 'Addon già presente nella configurazione' });
   }
 
   config.addonConfigs.push({
-    addonId: addon.id,
-    slug: addon.slug,
-    name: addon.name,
-    transportUrl: addon.transportUrl,
-    enabled: true,
-    idPrefixes: addon.idPrefixes,
-    types: addon.types,
-    logo: addon.logo,
-    nameTemplate: null,
-    titleTemplate: null,
-    descriptionTemplate: null,
-    badges: [],
+    addonId: addon.id, slug: addon.slug, name: addon.name,
+    transportUrl: addon.transportUrl, enabled: true,
+    idPrefixes: addon.idPrefixes, types: addon.types, logo: addon.logo,
+    nameTemplate: null, titleTemplate: null, descriptionTemplate: null, badges: [],
   });
 
   await saveUserConfig(req.user.userId, config);
-
   res.status(201).json({
     success: true,
-    addon: {
-      ...addon,
-      proxyUrl: `${BASE_URL}/proxy/${req.user.userId}/${addon.slug}/manifest.json`,
-    },
+    addon: { ...addon, proxyUrl: `${BASE_URL}/proxy/${req.user.userId}/${addon.slug}/manifest.json` },
   });
 }));
 
 // ─── GET /api/addons/install-urls ─────────────────────────────────────────
-// Returns the installable proxy URLs for all configured addons.
 router.get('/install-urls', asyncHandler(async (req, res) => {
   const config = await getUserConfig(req.user.userId);
+  if (!config?.addonConfigs?.length) return res.json({ urls: [], masterUrl: null });
 
-  if (!config?.addonConfigs?.length) {
-    return res.json({ urls: [], masterUrl: null });
-  }
-
-  const masterUrl = `${BASE_URL}/proxy/${req.user.userId}/manifest.json`;
+  const masterUrl       = `${BASE_URL}/proxy/${req.user.userId}/manifest.json`;
   const stremioMasterUrl = `stremio://${BASE_URL.replace(/^https?:\/\//, '')}/proxy/${req.user.userId}/manifest.json`;
 
   const urls = config.addonConfigs
     .filter(a => a.enabled)
     .map(a => ({
-      name: a.name,
-      slug: a.slug,
-      httpUrl: `${BASE_URL}/proxy/${req.user.userId}/${a.slug}/manifest.json`,
+      name:       a.name,
+      slug:       a.slug,
+      httpUrl:    `${BASE_URL}/proxy/${req.user.userId}/${a.slug}/manifest.json`,
       stremioUrl: `stremio://${BASE_URL.replace(/^https?:\/\//, '')}/proxy/${req.user.userId}/${a.slug}/manifest.json`,
     }));
 
-  res.json({
-    masterUrl,
-    stremioMasterUrl,
-    urls,
-    tip: 'Install the masterUrl to get ALL formatted addons in a single install.',
-  });
+  res.json({ masterUrl, stremioMasterUrl, urls });
 }));
 
-// ─── Shared helper ─────────────────────────────────────────────────────────
-
-async function setAddonEnabled(userId, slug, enabled) {
+// ─── Helper ────────────────────────────────────────────────────────────────
+async function setEnabled(userId, slug, enabled) {
   const config = await getUserConfig(userId);
-  if (!config) throw new Error('No configuration found');
-
-  const addonConf = config.addonConfigs?.find(a => a.slug === slug);
-  if (!addonConf) throw Object.assign(new Error(`Addon "${slug}" not found`), { status: 404 });
-
-  addonConf.enabled = enabled;
+  if (!config) throw new Error('Configurazione non trovata');
+  const addon = config.addonConfigs?.find(a => a.slug === slug);
+  if (!addon) throw Object.assign(new Error(`Addon "${slug}" non trovato`), { status: 404 });
+  addon.enabled = enabled;
   await saveUserConfig(userId, config);
-  logger.info(`User ${userId} ${enabled ? 'enabled' : 'disabled'} addon ${slug}`);
 }
 
 module.exports = router;
