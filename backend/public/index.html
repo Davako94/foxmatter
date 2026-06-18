@@ -57,7 +57,7 @@ body {
 .tab:hover { border-color: #444; color: var(--text); }
 .tab img { width: 18px; height: 18px; object-fit: contain; pointer-events: none; }
 
-/* Active Tab Styles mapped via current chosen provider state */
+/* Dynamic states */
 [data-provider="stremio"] #tab-stremio {
   border-color: var(--stremio); color: var(--stremio);
   background: var(--stremio-glow); box-shadow: 0 0 0 3px var(--stremio-glow);
@@ -103,7 +103,7 @@ input[type=email], input[type=password] {
 
 /* ── Error ── */
 .error-msg {
-  font-size: 0.82rem; color: #f55; margin-top: 10px;
+  font-size: 0.82rem; color: #f55; margin-top: 14px;
   padding: 8px 12px; background: #ff000015; border-radius: 6px;
   border-left: 3px solid #f55; display: none;
 }
@@ -179,10 +179,10 @@ input[type=email], input[type=password] {
   
   <div id="login-card">
     <div class="tabs">
-      <button type="button" class="tab" id="tab-stremio" onclick="setProvider('stremio')">
+      <button type="button" class="tab" id="tab-stremio">
         <img src="stremio.png" alt="" onerror="this.style.display='none'"> STREMIO
       </button>
-      <button type="button" class="tab" id="tab-nuvio" onclick="setProvider('nuvio')">
+      <button type="button" class="tab" id="tab-nuvio">
         <img src="nuvio.png" alt="" onerror="this.style.display='none'"> NUVIO
       </button>
     </div>
@@ -193,7 +193,7 @@ input[type=email], input[type=password] {
     <label class="field-label">Password</label>
     <input type="password" id="password" placeholder="Password" autocomplete="current-password"/>
 
-    <button class="btn-login" id="login-btn" onclick="doLogin()">
+    <button type="button" class="btn-login" id="login-btn">
       Log In with Stremio
     </button>
 
@@ -221,7 +221,7 @@ input[type=email], input[type=password] {
 
     <div class="url-row">
       <code id="url-text"></code>
-      <button class="copy-btn" onclick="copyUrl()">Copy</button>
+      <button type="button" class="copy-btn" id="copy-btn">Copy</button>
     </div>
 
     <div class="hint" style="margin-top:14px;">
@@ -229,7 +229,7 @@ input[type=email], input[type=password] {
       Stremio → Settings → Addons → "Add via URL"
     </div>
 
-    <button class="btn-ghost" onclick="doLogout()">↩ Switch Account</button>
+    <button type="button" class="btn-ghost" id="logout-btn">↩ Switch Account</button>
   </div>
 
 </div>
@@ -237,24 +237,21 @@ input[type=email], input[type=password] {
 <div class="footer">Foxmatter is open source and self-hostable.</div>
 
 <script>
-// ── Core Application State ─────────────────────────────────────────────────
+// ── Global Isolated State ──────────────────────────────────────────────────
 let provider = 'stremio';
 let token = localStorage.getItem('fm_token');
 let savedProvider = localStorage.getItem('fm_provider') || 'stremio';
 
-// ── Switch Provider Context Completely ─────────────────────────────────────
-function setProvider(p) {
-  console.log('Provider actively switched to:', p);
+// ── Isolated Context Switch Engine ─────────────────────────────────────────
+function updateProviderUI(p) {
   provider = p;
   localStorage.setItem('fm_provider', p);
 
-  // Update dynamic context state directly on container element
   const container = document.getElementById('main-container');
   if (container) {
     container.setAttribute('data-provider', p);
   }
 
-  // Update interface strings instantly
   const loginBtn = document.getElementById('login-btn');
   if (loginBtn) {
     loginBtn.textContent = p === 'stremio' ? 'Log In with Stremio' : 'Log In with Nuvio';
@@ -270,21 +267,40 @@ function setProvider(p) {
   clearError();
 }
 
-// ── Authentication Engine ──────────────────────────────────────────────────
-async function doLogin() {
-  const email = document.getElementById('email').value.trim();
-  const password = document.getElementById('password').value;
-  clearError();
+// ── Error Management ───────────────────────────────────────────────────────
+function showError(msg) {
+  const el = document.getElementById('login-error');
+  if (el) {
+    el.textContent = msg;
+    el.style.display = 'block';
+  }
+}
 
-  if (!email || !password) { showError('Please fill in all fields.'); return; }
+function clearError() {
+  const el = document.getElementById('login-error');
+  if (el) el.style.display = 'none';
+}
+
+// ── Authentication Handler ─────────────────────────────────────────────────
+async function handleLogin() {
+  clearError();
+  const emailElement = document.getElementById('email');
+  const passwordElement = document.getElementById('password');
+  
+  const email = emailElement ? emailElement.value.trim() : '';
+  const password = passwordElement ? passwordElement.value : '';
+
+  // Validation interceptor
+  if (!email || !password) { 
+    showError('Please fill in all fields.'); 
+    return; 
+  }
 
   const btn = document.getElementById('login-btn');
   btn.disabled = true;
   btn.innerHTML = '<span class="spinner"></span> Logging in…';
 
-  // Determine correct endpoint according to target variable
   const endpoint = provider === 'nuvio' ? '/api/auth/login/nuvio' : '/api/auth/login';
-  console.log('Sending payload to route endpoint:', endpoint);
 
   try {
     const res = await fetch(endpoint, {
@@ -303,7 +319,7 @@ async function doLogin() {
     localStorage.setItem('fm_token', token);
     localStorage.setItem('fm_provider', provider);
     
-    const success = await fetchMe(token);
+    const success = await fetchProfile(token);
     if (!success) {
       showError('Could not retrieve configuration payload.');
     }
@@ -316,32 +332,29 @@ async function doLogin() {
   }
 }
 
-// ── Profile Loader ─────────────────────────────────────────────────────────
-async function fetchMe(t) {
+// ── Fetch Profile Engine ───────────────────────────────────────────────────
+async function fetchProfile(t) {
   try {
     const res = await fetch('/api/me', {
       headers: { 'Authorization': 'Bearer ' + t },
     });
     if (!res.ok) return false;
     const me = await res.json();
-    showInstallCard(me);
+    renderInstallCard(me);
     return true;
   } catch {
     return false;
   }
 }
 
-function showInstallCard(me) {
+function renderInstallCard(me) {
   document.getElementById('login-card').style.display = 'none';
   document.getElementById('install-card').style.display = 'block';
 
   const p = localStorage.getItem('fm_provider') || provider;
 
-  // Sync up installation badge and display metrics
   const badge = document.getElementById('provider-badge');
-  if (badge) {
-    badge.textContent = p === 'nuvio' ? 'Nuvio' : 'Stremio';
-  }
+  if (badge) badge.textContent = p === 'nuvio' ? 'Nuvio' : 'Stremio';
 
   document.getElementById('provider-name-label').textContent = p === 'nuvio' ? 'Nuvio' : 'Stremio';
 
@@ -357,8 +370,8 @@ function showInstallCard(me) {
   document.getElementById('url-text').textContent = httpUrl;
 }
 
-// ── Session Reset ──────────────────────────────────────────────────────────
-function doLogout() {
+// ── Session Destructor ─────────────────────────────────────────────────────
+function handleLogout() {
   localStorage.removeItem('fm_token');
   localStorage.removeItem('fm_provider');
   token = null;
@@ -366,38 +379,61 @@ function doLogout() {
   document.getElementById('login-card').style.display = 'block';
   document.getElementById('email').value = '';
   document.getElementById('password').value = '';
-  setProvider('stremio');
+  updateProviderUI('stremio');
 }
 
-// ── Clipboard Utility ──────────────────────────────────────────────────────
-function copyUrl() {
-  const url = document.getElementById('url-text').textContent;
-  navigator.clipboard.writeText(url).then(() => {
-    const btn = document.querySelector('.copy-btn');
-    btn.textContent = '✓ Copied';
-    setTimeout(() => btn.textContent = 'Copy', 1800);
+// ── Native Event Listeners Setup (Anti-blocking architecture) ──────────────
+function bindEvents() {
+  // Tab buttons bindings
+  const tabStremio = document.getElementById('tab-stremio');
+  const tabNuvio = document.getElementById('tab-nuvio');
+
+  if (tabStremio) {
+    tabStremio.addEventListener('click', () => updateProviderUI('stremio'));
+  }
+  if (tabNuvio) {
+    tabNuvio.addEventListener('click', () => updateProviderUI('nuvio'));
+  }
+
+  // Submit button login binding
+  const loginBtn = document.getElementById('login-btn');
+  if (loginBtn) {
+    loginBtn.addEventListener('click', handleLogin);
+  }
+
+  // Logout button binding
+  const logoutBtn = document.getElementById('logout-btn');
+  if (logoutBtn) {
+    logoutBtn.addEventListener('click', handleLogout);
+  }
+
+  // Copy button binding
+  const copyBtn = document.getElementById('copy-btn');
+  if (copyBtn) {
+    copyBtn.addEventListener('click', () => {
+      const url = document.getElementById('url-text').textContent;
+      navigator.clipboard.writeText(url).then(() => {
+        copyBtn.textContent = '✓ Copied';
+        setTimeout(() => copyBtn.textContent = 'Copy', 1800);
+      });
+    });
+  }
+
+  // Enter Keyboard support
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && document.getElementById('login-card').style.display !== 'none') {
+      handleLogin();
+    }
   });
 }
 
-// ── UI Error Handlers ──────────────────────────────────────────────────────
-function showError(msg) {
-  const el = document.getElementById('login-error');
-  if (el) {
-    el.textContent = msg;
-    el.style.display = 'block';
-  }
-}
-
-function clearError() {
-  const el = document.getElementById('login-error');
-  if (el) el.style.display = 'none';
-}
-
-// ── Boot Sequence ─────────────────────────────────────────────────────────
-async function init() {
-  setProvider(savedProvider);
+// ── System Boot Sequence ────────────────────────────────────────────────────
+async function runtimeInit() {
+  bindEvents();
+  updateProviderUI(savedProvider);
+  
   if (token) {
-    const success = await fetchMe(token);
+    const success = await fetchProfile(token);
     if (!success) {
       localStorage.removeItem('fm_token');
     }
@@ -405,17 +441,10 @@ async function init() {
 }
 
 if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', init);
+  document.addEventListener('DOMContentLoaded', runtimeInit);
 } else {
-  init();
+  runtimeInit();
 }
-
-// Global Enter key wrapper
-document.addEventListener('keydown', e => {
-  if (e.key === 'Enter' && document.getElementById('login-card').style.display !== 'none') {
-    doLogin();
-  }
-});
 </script>
 </body>
 </html>
