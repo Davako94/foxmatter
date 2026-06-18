@@ -95,8 +95,57 @@ router.put('/', asyncHandler(async (req, res) => {
   });
 }));
 
+// ─── POST /api/config/addons/:slug (Nuovo Endpoint stile aiostreams) ───────
+router.post('/addons/:slug', asyncHandler(async (req, res) => {
+  const { slug } = req.params;
+  const { 
+    nameTemplate, 
+    titleTemplate, 
+    descriptionTemplate, 
+    enabled, 
+    badges, 
+    fullJsonOverride 
+  } = req.body;
+
+  const currentConfig = await getUserConfig(req.user.userId);
+  if (!currentConfig) return res.status(404).json({ error: 'Configurazione non trovata' });
+
+  const addonIndex = currentConfig.addonConfigs?.findIndex(a => a.slug === slug);
+  if (addonIndex === -1 || addonIndex === undefined) {
+    return res.status(404).json({ error: `Addon con slug "${slug}" non trovato` });
+  }
+
+  // Se l'utente carica o passa un .json intero
+  if (fullJsonOverride) {
+    const parsedJson = typeof fullJsonOverride === 'string' ? JSON.parse(fullJsonOverride) : fullJsonOverride;
+    
+    currentConfig.addonConfigs[addonIndex] = {
+      ...currentConfig.addonConfigs[addonIndex],
+      nameTemplate: parsedJson.nameTemplate || parsedJson.name_template || null,
+      titleTemplate: parsedJson.titleTemplate || parsedJson.title_template || null,
+      descriptionTemplate: parsedJson.descriptionTemplate || parsedJson.description_template || null,
+      badges: parsedJson.badges || currentConfig.addonConfigs[addonIndex].badges || [],
+      enabled: parsedJson.enabled !== undefined ? parsedJson.enabled : currentConfig.addonConfigs[addonIndex].enabled,
+    };
+  } else {
+    // Aggiornamento parziale standard da form manuale
+    if (nameTemplate !== undefined) currentConfig.addonConfigs[addonIndex].nameTemplate = nameTemplate;
+    if (titleTemplate !== undefined) currentConfig.addonConfigs[addonIndex].titleTemplate = titleTemplate;
+    if (descriptionTemplate !== undefined) currentConfig.addonConfigs[addonIndex].descriptionTemplate = descriptionTemplate;
+    if (enabled !== undefined) currentConfig.addonConfigs[addonIndex].enabled = enabled;
+    if (badges !== undefined) currentConfig.addonConfigs[addonIndex].badges = badges;
+  }
+
+  const validationResult = validateConfig(currentConfig);
+  if (!validationResult.valid) {
+    return res.status(400).json({ error: 'Configurazione non valida', details: validationResult.errors });
+  }
+
+  await saveUserConfig(req.user.userId, currentConfig);
+  res.json({ success: true, addonConfig: currentConfig.addonConfigs[addonIndex] });
+}));
+
 // ─── POST /api/config/import ───────────────────────────────────────────────
-// Import a badges JSON (Airstream-style format or Foxmatter format)
 router.post('/import', asyncHandler(async (req, res) => {
   const { json, merge = false } = req.body;
   
@@ -107,7 +156,6 @@ router.post('/import', asyncHandler(async (req, res) => {
     return res.status(400).json({ error: 'Invalid JSON' });
   }
 
-  // Support multiple import formats
   const badges = normalizeImportedBadges(imported);
   
   if (!badges.length) {
@@ -118,14 +166,12 @@ router.post('/import', asyncHandler(async (req, res) => {
   
   let newBadges;
   if (merge) {
-    // Merge: keep existing, add new ones (deduplicate by label)
     const existingLabels = new Set(currentConfig.globalBadges.map(b => b.label.toLowerCase()));
     newBadges = [
       ...currentConfig.globalBadges,
       ...badges.filter(b => !existingLabels.has(b.label.toLowerCase())),
     ];
   } else {
-    // Replace global badges
     newBadges = badges;
   }
 
@@ -148,7 +194,6 @@ router.get('/export', asyncHandler(async (req, res) => {
   let exported;
   
   if (format === 'airstream') {
-    // Export in Airstream-compatible format
     exported = {
       badges: config.globalBadges,
       global: true,
@@ -164,7 +209,6 @@ router.get('/export', asyncHandler(async (req, res) => {
 }));
 
 // ─── POST /api/config/sync-addons ─────────────────────────────────────────
-// Re-fetch user's installed Stremio addons and update config
 router.post('/sync-addons', asyncHandler(async (req, res) => {
   const user = await getUserById(req.user.userId);
   
@@ -178,11 +222,9 @@ router.post('/sync-addons', asyncHandler(async (req, res) => {
     return res.status(502).json({ error: 'Failed to fetch addons from Stremio', detail: result.error });
   }
 
-  // Load existing config and merge
   const currentConfig = await getUserConfig(req.user.userId) || getDefaultConfig();
   const existingAddonIds = new Set(currentConfig.addonConfigs.map(a => a.addonId));
   
-  // Add new addons that aren't configured yet
   const newAddons = result.addons
     .filter(a => !existingAddonIds.has(a.id) && a.isProxiable)
     .map(addon => ({
@@ -216,7 +258,6 @@ router.post('/sync-addons', asyncHandler(async (req, res) => {
 }));
 
 // ─── POST /api/config/preview ──────────────────────────────────────────────
-// Preview formatting on sample stream data
 router.post('/preview', asyncHandler(async (req, res) => {
   const { stream, config, addonId } = req.body;
   
@@ -235,18 +276,13 @@ router.post('/preview', asyncHandler(async (req, res) => {
 }));
 
 // ─── Helpers ───────────────────────────────────────────────────────────────
-
 function normalizeImportedBadges(data) {
-  // Handle our format
   if (Array.isArray(data?.badges)) {
     return data.badges.filter(b => b.pattern && b.label);
   }
-  
-  // Handle flat array
   if (Array.isArray(data)) {
     return data.filter(b => b.pattern && b.label);
   }
-  
   return [];
 }
 

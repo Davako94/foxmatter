@@ -1,15 +1,4 @@
 // routes/proxy.js - Dynamic Stremio addon proxy endpoints
-// This IS the generated addon that users install in Stremio
-//
-// URL structure:
-//   /proxy/:userId/:addonSlug/manifest.json
-//   /proxy/:userId/:addonSlug/stream/:type/:id.json
-//   /proxy/:userId/meta/:type/:id.json  (pass-through)
-//   /proxy/:userId/catalog/:type/:id.json  (pass-through)
-//
-// The :userId is used to load their configuration.
-// The :addonSlug identifies which upstream addon to call.
-
 const express = require('express');
 const router = express.Router();
 const { asyncHandler } = require('../middleware/errorHandler');
@@ -21,7 +10,6 @@ const { logger } = require('../utils/logger');
 
 const BASE_URL = process.env.BASE_URL || 'http://localhost:3001';
 
-// Simple in-memory cache for upstream responses
 const streamCache = new Map();
 const CACHE_TTL = (parseInt(process.env.PROXY_CACHE_TTL) || 300) * 1000;
 
@@ -40,7 +28,6 @@ function getFromCache(key) {
 }
 
 function setCache(key, data) {
-  // Basic LRU-lite: evict old entries if too many
   if (streamCache.size > 1000) {
     const firstKey = streamCache.keys().next().value;
     streamCache.delete(firstKey);
@@ -48,7 +35,15 @@ function setCache(key, data) {
   streamCache.set(key, { data, timestamp: Date.now() });
 }
 
-// ─── Set CORS headers for all proxy routes (Stremio requires this) ─────────
+// Helper per risolvere i template stringhe in stile aiostreams
+function resolveTemplate(template, variables) {
+  if (!template) return null;
+  return template.replace(/{([^{}]+)}/g, (match, key) => {
+    const cleanKey = key.trim();
+    return variables[cleanKey] !== undefined ? variables[cleanKey] : match;
+  });
+}
+
 router.use((req, res, next) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Headers', '*');
@@ -70,25 +65,36 @@ router.get('/:userId/:addonSlug/manifest.json', asyncHandler(async (req, res) =>
     return res.status(404).json({ error: 'Addon not found in user configuration' });
   }
 
-  // Fetch the original manifest to inherit its capabilities
   const upstreamManifest = await fetchAddonManifest(addonConfig.transportUrl);
   const originalManifest = upstreamManifest.success ? upstreamManifest.manifest : {};
 
-  // Build our proxy manifest - inherits everything from upstream
-  // but changes the URL to point to our proxy
+  // Variabili iniettabili nei template del manifest dell'Addon
+  const manifestVars = {
+    addon: addonConfig.name || originalManifest.name || addonSlug,
+    name: originalManifest.name || addonConfig.name || addonSlug,
+    version: originalManifest.version || '1.0.0',
+    description: originalManifest.description || ''
+  };
+
+  // Se l'utente ha definito un nameTemplate a livello Addon lo risolviamo, altrimenti fallback classico
+  const customName = addonConfig.nameTemplate 
+    ? resolveTemplate(addonConfig.nameTemplate, manifestVars) 
+    : `${addonConfig.name || addonSlug} [Formatted]`;
+
+  const customDesc = addonConfig.descriptionTemplate
+    ? resolveTemplate(addonConfig.descriptionTemplate, manifestVars)
+    : `Foxmatter proxy for ${addonConfig.name || addonSlug}. Formatted streams with custom badges and templates.`;
+
   const manifest = {
     id: `foxmatter.proxy.${userId}.${addonSlug}`,
-    name: `${addonConfig.name || addonSlug} [Formatted]`,
-    version: '1.0.0',
-    description: `Foxmatter proxy for ${addonConfig.name || addonSlug}. Formatted streams with custom badges and templates.`,
+    name: customName,
+    version: originalManifest.version || '1.0.0',
+    description: customDesc,
     logo: addonConfig.logo || originalManifest.logo || null,
-
-    // Inherit these from original addon - CRITICAL for Stremio to route correctly
     resources: originalManifest.resources || ['stream'],
     types: originalManifest.types || ['movie', 'series'],
     idPrefixes: originalManifest.idPrefixes || ['tt'],
-    catalogs: [], // We don't serve catalogs - pass-through only
-
+    catalogs: [],
     behaviorHints: {
       configurable: false,
       configurationRequired: false,
@@ -103,70 +109,60 @@ router.get('/:userId/:addonSlug/manifest.json', asyncHandler(async (req, res) =>
 router.get('/:userId/:addonSlug/stream/:type/:id.json', asyncHandler(async (req, res) => {
   const { userId, addonSlug, type, id } = req.params;
 
-  logger.info(`Stream request: user=${userId} addon=${addonSlug} type=${type} id=${id}`);
-
-  // Load user config
   const config = await getUserConfig(userId);
-  if (!config) {
-    return res.json({ streams: [] });
-  }
+  if (!config) return res.json({ streams: [] });
 
   const addonConfig = config.addonConfigs?.find(a => a.slug === addonSlug);
-  if (!addonConfig?.transportUrl) {
-    logger.warn(`No transport URL for addon ${addonSlug}`);
-    return res.json({ streams: [] });
-  }
+  if (!addonConfig?.transportUrl) return res.json({ streams: [] });
 
-  // Check cache
   const cacheKey = getCacheKey(userId, addonSlug, type, id);
   const cached = getFromCache(cacheKey);
   if (cached) {
-    logger.debug(`Cache hit: ${cacheKey}`);
     res.setHeader('X-Foxmatter-Cache', 'HIT');
     return res.json(cached);
   }
 
-  // Fetch from upstream addon
   const upstream = await fetchUpstreamStreams(addonConfig.transportUrl, type, id);
+  if (!upstream.success) return res.json({ streams: [] });
 
-  if (!upstream.success) {
-    logger.warn(`Upstream failed for ${addonSlug}: ${upstream.error}`);
-    return res.json({ streams: [] });
+  // 1. Applica prima le logiche globali del formatterEngine (badge, regex ecc.)
+  let formattedStreams = formatStreams(upstream.streams, config, addonConfig.id);
+
+  // 2. Applica la sovrascrittura esatta dei titoli degli stream (se l'utente ha impostato un titleTemplate)
+  if (addonConfig.titleTemplate) {
+    formattedStreams = formattedStreams.map(stream => {
+      const streamVars = {
+        title: stream.title || '',
+        name: stream.name || '',
+        addon: addonConfig.name || addonSlug,
+      };
+      
+      const overridenTitle = resolveTemplate(addonConfig.titleTemplate, streamVars);
+      return {
+        ...stream,
+        title: overridenTitle || stream.title
+      };
+    });
   }
-
-  // Apply formatting
-  const formattedStreams = formatStreams(
-    upstream.streams,
-    config,        // Full user config (has globalBadges + addonConfigs)
-    addonConfig.id // The addon ID for per-addon config lookup
-  );
 
   const response = {
     streams: formattedStreams,
-    // Preserve any extra fields from upstream response
     ...(upstream.raw?.cacheMaxAge && { cacheMaxAge: upstream.raw.cacheMaxAge }),
   };
 
   setCache(cacheKey, response);
   res.setHeader('X-Foxmatter-Cache', 'MISS');
-  res.setHeader('X-Foxmatter-Streams', String(formattedStreams.length));
   res.json(response);
 }));
 
-// ─── Master manifest: single addon that lists ALL user's configured addons ─
-// /proxy/:userId/manifest.json - Install ONE addon, get all formatted streams
+// ─── Master manifest ───────────────────────────────────────────────────────
 router.get('/:userId/manifest.json', asyncHandler(async (req, res) => {
   const { userId } = req.params;
-
   const config = await getUserConfig(userId);
-  if (!config) {
-    return res.status(404).json({ error: 'User not found' });
-  }
+  if (!config) return res.status(404).json({ error: 'User not found' });
 
   const user = await getUserById(userId);
-
-  // Aggregate idPrefixes from all configured addons
-  const allIdPrefixes = new Set(['tt']); // Always include tt (IMDb)
+  const allIdPrefixes = new Set(['tt']);
   const allTypes = new Set(['movie', 'series']);
   
   for (const addonConf of (config.addonConfigs || [])) {
@@ -180,53 +176,53 @@ router.get('/:userId/manifest.json', asyncHandler(async (req, res) => {
     version: '1.0.0',
     description: `All your addons, formatted. Powered by Foxmatter.`,
     logo: `${BASE_URL}/logo.png`,
-
     resources: ['stream'],
     types: [...allTypes],
     idPrefixes: [...allIdPrefixes],
     catalogs: [],
-
-    behaviorHints: {
-      configurable: false,
-    },
+    behaviorHints: { configurable: false },
   };
 
   res.json(manifest);
 }));
 
-// ─── Master stream endpoint ────────────────────────────────────────────────
-// /proxy/:userId/stream/:type/:id.json
-// Calls ALL configured addons in parallel and merges results
+// ─── Master stream endpoint (Parallelo + template override applicato) ──────
 router.get('/:userId/stream/:type/:id.json', asyncHandler(async (req, res) => {
   const { userId, type, id } = req.params;
-
   const config = await getUserConfig(userId);
-  if (!config || !config.addonConfigs?.length) {
-    return res.json({ streams: [] });
-  }
+  if (!config || !config.addonConfigs?.length) return res.json({ streams: [] });
 
-  logger.info(`Master stream: user=${userId} type=${type} id=${id} addons=${config.addonConfigs.length}`);
-
-  // Call all addons in parallel
   const results = await Promise.allSettled(
     config.addonConfigs
       .filter(a => a.enabled !== false && a.transportUrl)
       .map(async (addonConf) => {
         const cacheKey = getCacheKey(userId, addonConf.slug, type, id);
         const cached = getFromCache(cacheKey);
-        
         if (cached) return cached.streams || [];
         
         const upstream = await fetchUpstreamStreams(addonConf.transportUrl, type, id);
         if (!upstream.success) return [];
         
-        const formatted = formatStreams(upstream.streams, config, addonConf.id);
+        let formatted = formatStreams(upstream.streams, config, addonConf.id);
+
+        // Applica le sovrascritture dei titoli se presenti nell'addon specifico del master rendering
+        if (addonConf.titleTemplate) {
+          formatted = formatted.map(stream => {
+            const streamVars = {
+              title: stream.title || '',
+              name: stream.name || '',
+              addon: addonConf.name || addonConf.slug,
+            };
+            const overridenTitle = resolveTemplate(addonConf.titleTemplate, streamVars);
+            return { ...stream, title: overridenTitle || stream.title };
+          });
+        }
+
         setCache(cacheKey, { streams: formatted });
         return formatted;
       })
   );
 
-  // Merge all streams, preserve order (first addon's streams first)
   const allStreams = results
     .filter(r => r.status === 'fulfilled')
     .flatMap(r => r.value);
