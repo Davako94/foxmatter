@@ -2,25 +2,22 @@
 
 /**
  * formatterEngine.js
- * Si occupa di trasformare i dati grezzi dell'addon 
- * in oggetti strutturati per il templateEngine.
+ * Arricchisce lo stream con dati strutturati per il templateEngine.
  */
 
 function formatStreams(streams, config, addonId) {
     if (!Array.isArray(streams)) return [];
     
     return streams.map(stream => {
-        // 1. Cloniamo lo stream per non sporcare l'originale
         const s = { ...stream };
-        
-        // 2. Estrazione dati comuni (Quality, Resolution, Size)
         const title = s.title || s.name || '';
         
-        // Estrazione qualità/risoluzione
+        // Estrazione qualità e risoluzione
         const qualityMatch = title.match(/4K|2160p|1080p|720p|480p/i);
         s.quality = qualityMatch ? qualityMatch[0] : null;
+        s.resolution = s.quality;
         
-        // Estrazione dimensione file
+        // Estrazione dimensione in bytes
         const sizeMatch = title.match(/([\d.]+)\s*(GB|MB)/i);
         if (sizeMatch) {
             s.size = Math.round(parseFloat(sizeMatch[1]) * (sizeMatch[2].toUpperCase() === 'GB' ? 1e9 : 1e6));
@@ -28,11 +25,13 @@ function formatStreams(streams, config, addonId) {
             s.size = 0;
         }
 
-        // 3. Logica personalizzata (es. tag audio/lingue)
+        // Estrazione linguaggi e audio
         s.languages = extractLanguages(title);
+        s.languageEmojis = s.languages.map(l => l === 'ITA' ? '🇮🇹' : '🇬🇧');
         s.audio = extractAudio(title);
-        
-        // 4. Manteniamo la compatibilità con il parser
+        s.audioChannels = s.audio; 
+        s.visualTags = extractVisualTags(title);
+
         return s;
     });
 }
@@ -50,6 +49,11 @@ function extractAudio(title) {
     return 'Stereo';
 }
 
-// IMPORTANTE: Esporta SOLO le funzioni di formattazione.
-// NON esportare buildStreamContext qui.
+function extractVisualTags(title) {
+    const tags = [];
+    if (/hdr/i.test(title)) tags.push('HDR');
+    if (/dv|dolby vision/i.test(title)) tags.push('DV');
+    return tags;
+}
+
 module.exports = { formatStreams };
