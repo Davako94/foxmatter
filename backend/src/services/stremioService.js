@@ -3,13 +3,14 @@ const axios = require('axios');
 const { logger } = require('../utils/logger');
 
 const STREMIO_API = process.env.STREMIO_API_BASE || 'https://api.strem.io';
+const STREMIO_UA  = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Stremio/4.4.159';
 
 const stremioClient = axios.create({
   baseURL: STREMIO_API,
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json',
-    'User-Agent': 'Foxmatter/1.0',
+    'User-Agent': STREMIO_UA,
   },
 });
 
@@ -23,6 +24,7 @@ async function stremioAuth(email, password) {
       email,
       password,
       facebook: false,
+      type: 'login', // Aggiunto per parità col tuo index.js
     });
 
     const data = response.data;
@@ -51,37 +53,15 @@ async function stremioAuth(email, password) {
 
 /**
  * Fetch all installed addons for a user.
- * Utilizza le chiamate POST ufficiali di Stremio e fallback aggressivi per evitare 502/Timeout.
+ * Allineato con i parametri esatti testati nel tuo index.js
  */
 async function fetchUserAddons(authKey) {
   try {
-    // 1. L'API di Stremio richiede POST per recuperare il profilo utente
-    const profileRes = await stremioClient.post('/api/profile', { authKey });
-    
-    // Intercettazione dell'errore di sessione/auth erogato da Stremio
-    if (profileRes.data?.error) {
-      logger.error(`Stremio API profile error: ${profileRes.data.error}`);
-      return { success: false, error: `Stremio Auth Error: ${profileRes.data.error}`, addons: [] };
-    }
-
-    const result = profileRes.data?.result;
-    if (!result) {
-      throw new Error('Invalid response structure from Stremio profile');
-    }
-
-    // FALLBACK AGGRESSIVO: Estrae l'ID utente in qualunque modo sia strutturato nel payload
-    const userId = result._id || result.id || result.user?._id || result.user?.id;
-
-    if (!userId) {
-      logger.error('Stremio profile payload senza ID identificativo valido:', JSON.stringify(profileRes.data));
-      throw new Error('Could not identify user ID from Stremio profile');
-    }
-
-    // 2. L'API di Stremio richiede POST con payload JSON anche per la collezione addon
+    // Chiamata diretta alla collezione addon usando i parametri standard (niente più /api/profile)
     const response = await stremioClient.post('/api/addonCollectionGet', {
       authKey,
-      type: 'User',
-      id: userId,
+      type: 'AddonCollection',
+      id: 'addon_collection',
     });
 
     if (response.data?.error) {
@@ -89,14 +69,20 @@ async function fetchUserAddons(authKey) {
       return { success: false, error: response.data.error, addons: [] };
     }
 
-    const collection = response.data.result?.addons || [];
+    // Gestiamo le due possibili strutture di risposta in base all'account
+    const raw = response.data?.result?.addons || response.data?.result || [];
+    const collection = Array.isArray(raw) ? raw : [];
     
     const seenUrls = new Set();
     const processable = [];
 
     for (const addon of collection) {
-      if (addon.transportUrl && addon.manifest) {
-        const normalized = normalizeAddon(addon);
+      // Estraiamo in sicurezza url e manifest (alcune API Stremio nidificano diversamente)
+      const manifestUrl = addon.transportUrl;
+      const manifest = addon.manifest;
+
+      if (manifestUrl && manifest) {
+        const normalized = normalizeAddon({ transportUrl: manifestUrl, manifest });
         const cleanUrl = normalized.transportUrl.replace(/\/$/, '');
         
         if (!seenUrls.has(cleanUrl)) {
@@ -106,7 +92,7 @@ async function fetchUserAddons(authKey) {
       }
     }
 
-    logger.info(`Fetched and cleaned ${processable.length} unique Stremio addons for user ${userId}`);
+    logger.info(`Fetched and cleaned ${processable.length} unique Stremio addons`);
     return { success: true, addons: processable };
   } catch (err) {
     logger.error('Error fetching user addons:', err.message);
@@ -120,7 +106,10 @@ async function fetchAddonManifest(transportUrl) {
       ? transportUrl
       : `${transportUrl.replace(/\/$/, '')}/manifest.json`;
 
-    const response = await axios.get(manifestUrl, { timeout: 8000 });
+    const response = await axios.get(manifestUrl, { 
+      timeout: 8000,
+      headers: { 'User-Agent': STREMIO_UA }
+    });
     return { success: true, manifest: response.data };
   } catch (err) {
     logger.warn(`Could not fetch manifest from ${transportUrl}: ${err.message}`);
@@ -162,7 +151,7 @@ function normalizeAddon(addon) {
   const manifest = addon.manifest || {};
   const resources = manifest.resources || [];
   
-  // Normalizzazione robusta delle risorse (accetta stringhe o oggetti strutturati)
+  // Normalizzazione robusta delle risorse
   const hasStreamResource = resources.some(r => {
     if (typeof r === 'string') return r === 'stream';
     if (r && typeof r === 'object') return r.name === 'stream';
@@ -174,7 +163,7 @@ function normalizeAddon(addon) {
     name: manifest.name || 'Unknown Addon',
     version: manifest.version || '0.0.0',
     description: manifest.description || '',
-    logo: manifest.logo || null,
+    logo: manifest.logo || manifest.icon || manifest.background || null,
     transportUrl: addon.transportUrl,
     types: manifest.types || [],
     catalogs: manifest.catalogs || [],
