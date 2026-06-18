@@ -61,7 +61,6 @@ body {
 }
 .tab:hover { border-color: #444; color: var(--text); }
 
-/* Prevent inner elements from swallowing the click event */
 .tab img, .tab span {
   pointer-events: none;
 }
@@ -79,7 +78,6 @@ body {
   height: 18px;
   object-fit: contain;
 }
-.tab-icon { font-size: 1.1rem; }
 
 /* ── Form fields ── */
 .field-label { font-size: 0.75rem; color: var(--muted); margin: 14px 0 5px; display: block; }
@@ -257,33 +255,34 @@ let savedProvider = localStorage.getItem('fm_provider') || 'stremio';
 
 // ── Provider tab switch ────────────────────────────────────────────────────
 function setProvider(p) {
-  console.log('Provider selected:', p);
+  console.log('Provider actively switched to:', p);
   provider = p;
   localStorage.setItem('fm_provider', p);
 
-  // Apply context states to body
+  // Sync up global layout structural classes
   document.body.classList.remove('stremio-active', 'nuvio-active');
   document.body.classList.add(p === 'stremio' ? 'stremio-active' : 'nuvio-active');
 
-  // Interactive layout updates
+  // Hard UI sync on the active tabs
   const tabStremio = document.getElementById('tab-stremio');
   const tabNuvio = document.getElementById('tab-nuvio');
   
-  if (tabStremio) {
-    tabStremio.className = 'tab' + (p === 'stremio' ? ' active-stremio' : '');
-  }
-  if (tabNuvio) {
-    tabNuvio.className = 'tab' + (p === 'nuvio' ? ' active-nuvio' : '');
-  }
+  if (tabStremio) tabStremio.className = 'tab' + (p === 'stremio' ? ' active-stremio' : '');
+  if (tabNuvio) tabNuvio.className = 'tab' + (p === 'nuvio' ? ' active-nuvio' : '');
 
-  // Submit button text configuration
+  // CRITICAL FIX: Explicitly swap the button's execution label text and styles
   const btn = document.getElementById('login-btn');
   if (btn) {
-    btn.className = p === 'stremio' ? 'btn-login btn-stremio' : 'btn-login btn-nuvio';
-    btn.textContent = p === 'stremio' ? 'Log In with Stremio' : 'Log In with Nuvio';
+    if (p === 'stremio') {
+      btn.className = 'btn-login btn-stremio';
+      btn.textContent = 'Log In with Stremio';
+    } else {
+      btn.className = 'btn-login btn-nuvio';
+      btn.textContent = 'Log In with Nuvio';
+    }
   }
 
-  // Hint text updates
+  // Swap dynamic hint instructions
   const hint = document.getElementById('login-hint');
   if (hint) {
     hint.innerHTML = p === 'stremio'
@@ -294,7 +293,7 @@ function setProvider(p) {
   clearError();
 }
 
-// ── Login action ───────────────────────────────────────────────────────────
+// ── Login action execution ─────────────────────────────────────────────────
 async function doLogin() {
   const email = document.getElementById('email').value.trim();
   const password = document.getElementById('password').value;
@@ -306,8 +305,11 @@ async function doLogin() {
   btn.disabled = true;
   btn.innerHTML = '<span class="spinner"></span> Logging in…';
 
+  // Dynamic API endpoint routing based on active selection variable
+  const endpoint = provider === 'nuvio' ? '/api/auth/login/nuvio' : '/api/auth/login';
+  console.log('Routing request to endpoint:', endpoint);
+
   try {
-    const endpoint = provider === 'nuvio' ? '/api/auth/login/nuvio' : '/api/auth/login';
     const res = await fetch(endpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -337,7 +339,7 @@ async function doLogin() {
   }
 }
 
-// ── Sync profile ───────────────────────────────────────────────────────────
+// ── Profile Sychronization ─────────────────────────────────────────────────
 async function fetchMe(t) {
   try {
     const res = await fetch('/api/me', {
@@ -358,15 +360,13 @@ function showInstallCard(me) {
 
   const p = localStorage.getItem('fm_provider') || provider;
 
-  // Badge updates
+  // Final confirmation screen rendering setup
   const badge = document.getElementById('provider-badge');
   badge.className = 'provider-badge ' + (p === 'nuvio' ? 'badge-nuvio' : 'badge-stremio');
   badge.innerHTML = p === 'nuvio' ? '🟠 Nuvio' : '🟣 Stremio';
 
-  // Label configurations
   document.getElementById('provider-name-label').textContent = p === 'nuvio' ? 'Nuvio' : 'Stremio';
 
-  // Install link logic
   const installBtn = document.getElementById('install-btn');
   installBtn.textContent = p === 'nuvio' ? '⚡ Install in Nuvio' : '⚡ Install in Stremio';
   installBtn.className = 'btn-install ' + (p === 'nuvio' ? 'btn-install-nuvio' : 'btn-install-stremio');
@@ -380,7 +380,7 @@ function showInstallCard(me) {
   document.getElementById('url-text').textContent = httpUrl;
 }
 
-// ── Logout ─────────────────────────────────────────────────────────────────
+// ── Session Destructor ─────────────────────────────────────────────────────
 function doLogout() {
   localStorage.removeItem('fm_token');
   localStorage.removeItem('fm_provider');
@@ -392,7 +392,7 @@ function doLogout() {
   setProvider('stremio');
 }
 
-// ── Clipboard helper ───────────────────────────────────────────────────────
+// ── Clipboard Utility ──────────────────────────────────────────────────────
 function copyUrl() {
   const url = document.getElementById('url-text').textContent;
   navigator.clipboard.writeText(url).then(() => {
@@ -402,7 +402,7 @@ function copyUrl() {
   });
 }
 
-// ── Error handling ─────────────────────────────────────────────────────────
+// ── Helpers ────────────────────────────────────────────────────────────────
 function showError(msg) {
   const el = document.getElementById('login-error');
   if (el) {
@@ -416,8 +416,9 @@ function clearError() {
   if (el) el.style.display = 'none';
 }
 
-// ── Initialization ─────────────────────────────────────────────────────────
+// ── Initialization Routine ──────────────────────────────────────────────────
 async function init() {
+  // Always favor the runtime setup on load context
   setProvider(savedProvider);
   
   if (token) {
@@ -434,7 +435,7 @@ if (document.readyState === 'loading') {
   init();
 }
 
-// Global Enter Key support
+// Enter Key handler
 document.addEventListener('keydown', e => {
   if (e.key === 'Enter' && document.getElementById('login-card').style.display !== 'none') {
     doLogin();
