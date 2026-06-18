@@ -39,16 +39,14 @@ router.get('/', asyncHandler(async (req, res) => {
   const config       = await getUserConfig(req.user.userId);
   const configuredIds = new Set((config?.addonConfigs || []).map(a => a.addonId));
 
-  const annotated = result.addons.map(addon => {
-    // Paracadute: forziamo true se l'addon ha esplicitamente delle risorse compatibili con gli stream
-    const canProxy = addon.isProxiable || addon.resources?.includes('stream');
+  // FILTRO DI ESCLUSIONE: Escludiamo Cinemeta, cataloghi o sottotitoli puri. Passano solo gli addon video reali.
+  const filteredAddons = result.addons.filter(addon => addon.isProxiable);
+
+  const annotated = filteredAddons.map(addon => {
     return {
       ...addon,
-      isProxiable: canProxy,
       isConfigured: configuredIds.has(addon.id),
-      proxyUrl: canProxy
-        ? `${BASE_URL}/proxy/${req.user.userId}/${addon.slug}/manifest.json`
-        : null,
+      proxyUrl: `${BASE_URL}/proxy/${req.user.userId}/${addon.slug}/manifest.json`,
     };
   });
 
@@ -76,8 +74,10 @@ router.post('/sync', asyncHandler(async (req, res) => {
   };
 
   const existingIds = new Set(currentConfig.addonConfigs.map(a => a.addonId));
-  const newAddons   = result.addons
-    .filter(a => !existingIds.has(a.id) && (a.isProxiable || a.resources?.includes('stream')))
+  
+  // Applichiamo il medesimo filtro stringente basato su isProxiable per non inserire spazzatura nel DB
+  const newAddons = result.addons
+    .filter(a => !existingIds.has(a.id) && a.isProxiable)
     .map(addon => ({
       addonId:             addon.id,
       slug:                addon.slug,
@@ -100,11 +100,14 @@ router.post('/sync', asyncHandler(async (req, res) => {
 
   await saveUserConfig(req.user.userId, updatedConfig);
 
+  // Filtriamo anche il payload di ritorno per consistenza della UI
+  const filteredResultAddons = result.addons.filter(a => a.isProxiable);
+
   res.json({
     success: true,
-    total:   result.addons.length,
+    total:   filteredResultAddons.length,
     added:   newAddons.length,
-    addons:  result.addons,
+    addons:  filteredResultAddons,
   });
 }));
 
@@ -167,6 +170,11 @@ router.post('/add', asyncHandler(async (req, res) => {
     transportUrl,
     manifest: { ...manifest, name: name || manifest.name },
   });
+
+  // Validazione di sicurezza in inserimento manuale
+  if (!addon.isProxiable) {
+    return res.status(400).json({ error: "L'addon inserito non gestisce flussi di riproduzione video (stream)" });
+  }
 
   const config = await getUserConfig(req.user.userId) || {
     globalBadges: [], addonConfigs: [], settings: {},

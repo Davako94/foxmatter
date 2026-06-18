@@ -51,23 +51,23 @@ async function stremioAuth(email, password) {
 
 /**
  * Fetch all installed addons for a user.
- * Include de-duplication filter to prevent quadrupling if the collection returns mixed profiles.
+ * Utilizza le chiamate POST ufficiali di Stremio per evitare 502/Timeout.
  */
 async function fetchUserAddons(authKey) {
   try {
-    const profileRes = await stremioClient.get(`/api/profile?authKey=${authKey}`);
+    // L'API di Stremio richiede POST per recuperare il profilo utente
+    const profileRes = await stremioClient.post('/api/profile', { authKey });
     const userId = profileRes.data.result?._id;
 
     if (!userId) {
-      throw new Error('Could not retrieve user ID');
+      throw new Error('Could not retrieve user ID from Stremio profile');
     }
 
-    const response = await stremioClient.get('/api/addonCollectionGet', {
-      params: {
-        authKey,
-        type: 'User',
-        id: userId,
-      },
+    // L'API di Stremio richiede POST con payload JSON anche per la collezione addon
+    const response = await stremioClient.post('/api/addonCollectionGet', {
+      authKey,
+      type: 'User',
+      id: userId,
     });
 
     const collection = response.data.result?.addons || [];
@@ -143,6 +143,7 @@ function normalizeAddon(addon) {
   const manifest = addon.manifest || {};
   const resources = manifest.resources || [];
   
+  // Normalizzazione robusta delle risorse (accetta stringhe o oggetti)
   const hasStreamResource = resources.some(r => {
     if (typeof r === 'string') return r === 'stream';
     if (r && typeof r === 'object') return r.name === 'stream';
