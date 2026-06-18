@@ -1,15 +1,11 @@
 // services/configService.js - User formatting config persistence for Foxmatter
 //
 // Supabase table: user_configs
-//   id          uuid primary key default gen_random_uuid()
-//   user_id     uuid references users(id) on delete cascade
-//   config      jsonb not null default '{}'
-//   created_at  timestamptz default now()
-//   updated_at  timestamptz default now()
-//
-// One row per user. The entire config is stored as a single JSONB blob.
-// For larger deployments you'd normalise badges/templates into child tables,
-// but single-blob keeps queries fast and schema migrations trivial.
+//   id        uuid primary key default gen_random_uuid()
+//   user_id   uuid references users(id) on delete cascade
+//   config    jsonb not null default '{}'
+//   created_at timestamptz default now()
+//   updated_at timestamptz default now()
 
 const { createClient } = require('@supabase/supabase-js');
 const { logger } = require('../utils/logger');
@@ -20,7 +16,18 @@ const supabase = createClient(
   { auth: { persistSession: false } }
 );
 
-// Known template variable names that the formatter supports
+// Whitelist estesa radice degli oggetti supportati secondo le specifiche ufficiali AIOStreams
+const VALID_OBJECT_ROOTS = new Set([
+  'config',
+  'stream',
+  'service',
+  'addon',
+  'metadata',
+  'debug',
+  'tools'
+]);
+
+// Manteniamo le variabili Foxmatter originali come fallback legacy
 const VALID_TEMPLATE_VARS = new Set([
   'original_name', 'original_title', 'original_description',
   'quality', 'size', 'seeders', 'audio', 'language',
@@ -125,10 +132,21 @@ function validateConfig(config) {
       if (!tpl) continue;
 
       const unknownVars = extractTemplateVars(tpl).filter(v => {
-        // Allow {badge:ANYTHING} and {if:VAR}...{/if} as valid constructs
+        // Ignora i costrutti speciali ereditati
         if (v.startsWith('badge:')) return false;
         if (v.startsWith('if:')) return false;
-        return !VALID_TEMPLATE_VARS.has(v);
+        
+        // Estrae il nome puro della variabile isolandolo da modificatori (es. 'stream.title::upper' -> 'stream.title')
+        const rawVar = v.split('::')[0].trim();
+        
+        // Gestione delle strutture con notazione a punto di AIOStreams (es: stream.title, metadata.genres)
+        if (rawVar.includes('.')) {
+          const root = rawVar.split('.')[0];
+          if (VALID_OBJECT_ROOTS.has(root)) return false; // È un oggetto AIOStreams valido
+        }
+
+        // Controllo finale sulla whitelist piatta o legacy
+        return !VALID_TEMPLATE_VARS.has(rawVar);
       });
 
       if (unknownVars.length) {
@@ -164,6 +182,7 @@ function validateConfig(config) {
  * Extract all {variable} names from a template string.
  */
 function extractTemplateVars(template) {
+  if (typeof template !== 'string') return [];
   const matches = template.matchAll(/\{([^}]+)\}/g);
   return [...matches].map(m => m[1].trim());
 }
