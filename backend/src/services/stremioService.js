@@ -4,7 +4,6 @@ const { logger } = require('../utils/logger');
 
 const STREMIO_API = process.env.STREMIO_API_BASE || 'https://api.strem.io';
 
-// ─── Stremio API client ────────────────────────────────────────────────────
 const stremioClient = axios.create({
   baseURL: STREMIO_API,
   timeout: 10000,
@@ -15,8 +14,8 @@ const stremioClient = axios.create({
 });
 
 /**
- * Authenticate with Stremio and return authKey.
- * Uses the unofficial but stable Stremio API endpoint.
+ * Authenticate with Stremio.
+ * NO AUTOLOGIN: Gestisce solo la chiamata esplicita.
  */
 async function stremioAuth(email, password) {
   try {
@@ -43,22 +42,19 @@ async function stremioAuth(email, password) {
     };
   } catch (err) {
     logger.error('Stremio auth error:', err.message);
-    
     if (err.response?.status === 401) {
       return { success: false, error: 'Invalid credentials' };
     }
-    
     return { success: false, error: 'Stremio API unavailable' };
   }
 }
 
 /**
  * Fetch all installed addons for a user.
- * Returns an array of addon manifests with their remote URLs.
+ * Include de-duplication filter to prevent quadrupling if the collection returns mixed profiles.
  */
 async function fetchUserAddons(authKey) {
   try {
-    // First get the user profile to get their ID
     const profileRes = await stremioClient.get(`/api/profile?authKey=${authKey}`);
     const userId = profileRes.data.result?._id;
 
@@ -66,7 +62,6 @@ async function fetchUserAddons(authKey) {
       throw new Error('Could not retrieve user ID');
     }
 
-    // Fetch addon collection
     const response = await stremioClient.get('/api/addonCollectionGet', {
       params: {
         authKey,
@@ -77,13 +72,22 @@ async function fetchUserAddons(authKey) {
 
     const collection = response.data.result?.addons || [];
     
-    // Filter out official Stremio addons that we can't/shouldn't proxy
-    // and normalize the format
-    const processable = collection
-      .filter(addon => addon.transportUrl && addon.manifest)
-      .map(addon => normalizeAddon(addon));
+    const seenUrls = new Set();
+    const processable = [];
 
-    logger.info(`Fetched ${processable.length} addons for user ${userId}`);
+    for (const addon of collection) {
+      if (addon.transportUrl && addon.manifest) {
+        const normalized = normalizeAddon(addon);
+        const cleanUrl = normalized.transportUrl.replace(/\/$/, '');
+        
+        if (!seenUrls.has(cleanUrl)) {
+          seenUrls.add(cleanUrl);
+          processable.push(normalized);
+        }
+      }
+    }
+
+    logger.info(`Fetched and cleaned ${processable.length} unique Stremio addons for user ${userId}`);
     return { success: true, addons: processable };
   } catch (err) {
     logger.error('Error fetching user addons:', err.message);
@@ -91,10 +95,6 @@ async function fetchUserAddons(authKey) {
   }
 }
 
-/**
- * Fetch the manifest from an addon's transport URL.
- * Used to refresh addon capabilities/info.
- */
 async function fetchAddonManifest(transportUrl) {
   try {
     const manifestUrl = transportUrl.endsWith('/manifest.json')
@@ -109,10 +109,6 @@ async function fetchAddonManifest(transportUrl) {
   }
 }
 
-/**
- * Proxy a stream request to an upstream addon.
- * This is the core of the formatter - calls upstream, gets streams, we format them.
- */
 async function fetchUpstreamStreams(transportUrl, type, id) {
   try {
     const baseUrl = transportUrl.replace(/\/manifest\.json$/, '').replace(/\/$/, '');
@@ -138,17 +134,11 @@ async function fetchUpstreamStreams(transportUrl, type, id) {
       logger.warn(`Upstream addon timeout: ${transportUrl}`);
       return { success: false, error: 'upstream_timeout', streams: [] };
     }
-    
     logger.error(`Error fetching upstream streams: ${err.message}`);
     return { success: false, error: err.message, streams: [] };
   }
 }
 
-// ─── Helpers ───────────────────────────────────────────────────────────────
-
-/**
- * Normalize a Stremio addon to our internal format.
- */
 function normalizeAddon(addon) {
   const manifest = addon.manifest || {};
   const resources = manifest.resources || [];

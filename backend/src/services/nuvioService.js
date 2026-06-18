@@ -32,7 +32,7 @@ function restClient(accessToken) {
 
 /**
  * Authenticate against Nuvio (Supabase GoTrue).
- * Returns { success, accessToken, refreshToken, user }
+ * NO AUTOLOGIN: Deve essere invocata esplicitamente con credenziali fresche.
  */
 async function nuvioAuth(email, password) {
   try {
@@ -59,27 +59,25 @@ async function nuvioAuth(email, password) {
     };
   } catch (err) {
     logger.error('Nuvio auth error:', err.message);
-
     const status = err.response?.status;
     const msg    = err.response?.data?.error_description || err.response?.data?.msg;
 
     if (status === 400 || status === 401 || status === 422) {
       return { success: false, error: msg || 'Credenziali Nuvio non valide' };
     }
-
     return { success: false, error: 'Nuvio API non raggiungibile' };
   }
 }
 
 /**
  * Fetch installed addons for a Nuvio user.
- * Reads from the `addons` table in Nuvio's Supabase.
+ * Rimosso il rischio di duplicazione forzata ed eliminati i falsi positivi di log.
  */
 async function fetchNuvioAddons(accessToken, nuvioUserId) {
   try {
     const client = restClient(accessToken);
 
-    // Fetch only enabled addons for this user
+    // Recupera solo gli addon abilitati
     const res = await client.get('/addons', {
       params: {
         user_id: `eq.${nuvioUserId}`,
@@ -89,13 +87,26 @@ async function fetchNuvioAddons(accessToken, nuvioUserId) {
       },
     });
 
-  const rows = res.data || [];
-    logger.info(`Fetched ${rows.length} Nuvio addons for user ${nuvioUserId}`);
+    const rows = res.data || [];
+    logger.info(`Fetched ${rows.length} rows from Nuvio DB for user ${nuvioUserId}`);
 
-    const addons = rows
-      .map(row => normalizeNuvioAddon(row))
-      .filter(a => a !== null);
+    // Mappa e normalizza eliminando i duplicati causati dai molteplici profile_id nello stesso account
+    const seenUrls = new Set();
+    const addons = [];
 
+    for (const row of rows) {
+      const normalized = normalizeNuvioAddon(row);
+      if (normalized) {
+        // Se l'addon è già stato inserito (es. presente in profile_id: 1 e profile_id: 2), lo saltiamo per evitare la quadruplicazione
+        if (seenUrls.has(normalized.transportUrl)) {
+          continue; 
+        }
+        seenUrls.add(normalized.transportUrl);
+        addons.push(normalized);
+      }
+    }
+
+    logger.info(`Normalized ${addons.length} unique Nuvio addons after de-duplication`);
     return { success: true, addons };
   } catch (err) {
     logger.error('fetchNuvioAddons error:', err.message);
@@ -105,6 +116,7 @@ async function fetchNuvioAddons(accessToken, nuvioUserId) {
 
 /**
  * Refresh a Nuvio access token using the refresh token.
+ * Chiamato solo su richiesta esplicita del frontend/middleware controller, nessun automatismo nascosto.
  */
 async function refreshNuvioToken(refreshToken) {
   try {
@@ -125,51 +137,48 @@ async function refreshNuvioToken(refreshToken) {
 
 // ─── Helpers ───────────────────────────────────────────────────────────────
 
-/**
- * Normalize a Nuvio addon DB row into our standard format.
- */
 function normalizeNuvioAddon(row) {
   try {
-    // Shape A: manifest already in the row
+    const targetUrl = row.url || row.manifest_url || row.manifest?.transportUrl;
+
+    // Se non c'è una sorgente URL valida, allora (e solo allora) skippiamo
+    if (!targetUrl) {
+      logger.warn('Nuvio addon row has no valid URL reference — skipping', JSON.stringify(row));
+      return null;
+    }
+
+    const cleanTransportUrl = targetUrl.replace(/\/manifest\.json$/, '').replace(/\/$/, '');
+
+    // Shape A: Il manifest completo è già presente nel record del DB
     if (row.manifest && typeof row.manifest === 'object') {
-      const transportUrl = row.url || row.manifest_url || row.manifest?.transportUrl;
-      if (!transportUrl) return null;
-      
       return normalizeAddon({
-        transportUrl: transportUrl.replace(/\/manifest\.json$/, ''),
+        transportUrl: cleanTransportUrl,
         manifest: row.manifest,
       });
     }
 
-    // Shape B: only a URL (La colonna reale nel DB recuperata dai log è row.url)
-    if (row.url || row.manifest_url) {
-      const url = row.url || row.manifest_url;
-      const slug = url
-        .replace(/^https?:\/\//, '')
-        .replace(/\/manifest\.json$/, '')
-        .replace(/[^a-z0-9]+/gi, '-')
-        .toLowerCase()
-        .slice(0, 60);
+    // Shape B: Abbiamo solo la colonna `url` / `manifest_url` (il tuo caso nei log)
+    const slug = cleanTransportUrl
+      .replace(/^https?:\/\//, '')
+      .replace(/[^a-z0-9]+/gi, '-')
+      .toLowerCase()
+      .slice(0, 60);
 
-      return {
-        id:           row.id || slug,
-        name:         row.name || slug,
-        version:      '0.0.0',
-        description:  '',
-        logo:         null,
-        transportUrl: url.replace(/\/manifest\.json$/, ''),
-        types:        ['movie', 'series'],
-        catalogs:     [],
-        resources:    ['stream'],
-        idPrefixes:   ['tt'],
-        behaviorHints: {},
-        slug,
-        isProxiable:  true,
-      };
-    }
-
-    logger.warn('Nuvio addon row has neither manifest nor url — skipping', JSON.stringify(row));
-    return null;
+    return {
+      id:           row.id || slug,
+      name:         row.name || slug,
+      version:      '0.0.0',
+      description:  '',
+      logo:         null,
+      transportUrl: cleanTransportUrl,
+      types:        ['movie', 'series'],
+      catalogs:     [],
+      resources:    ['stream'],
+      idPrefixes:   ['tt'],
+      behaviorHints: {},
+      slug,
+      isProxiable:  true,
+    };
   } catch (err) {
     logger.warn('normalizeNuvioAddon error:', err.message);
     return null;
