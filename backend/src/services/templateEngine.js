@@ -2,6 +2,7 @@
 
 /**
  * Risolve un template AIOStreams-compatibile
+ * Supporta tutte le funzionalità del formatter AIOStreams
  */
 function parseTemplate(template, ctx) {
   if (!template || typeof template !== 'string') return '';
@@ -30,7 +31,8 @@ function evaluateExpression(expr, ctx) {
   for (let i = 1; i < parts.length; i++) {
     const part = parts[i].trim();
 
-    // 1. Condizionale [ "Vero" || "Falso" ]
+    // 1. Condizionali compatti
+    // Formato: operatore["valore_vero"||"valore_falso"]
     const condMatch = part.match(/^(exists|~|>|<|=|>=|<=)?(?:(.*?))?\["(.*?)"\s*\|\|\s*"(.*?)"\]$/);
     if (condMatch) {
       const type = condMatch[1] || 'exists';
@@ -39,19 +41,75 @@ function evaluateExpression(expr, ctx) {
       const falseVal = condMatch[4];
       
       let met = false;
-      if (type === 'exists') met = (val !== undefined && val !== null && val !== '');
-      else if (type === '~') met = String(val ?? '').toLowerCase().includes(condVal.toLowerCase());
+      switch(type) {
+        case 'exists':
+          met = (val !== undefined && val !== null && val !== '');
+          break;
+        case '~':
+          met = String(val ?? '').toLowerCase().includes(condVal.toLowerCase());
+          break;
+        case '>':
+          met = parseFloat(val) > parseFloat(condVal);
+          break;
+        case '<':
+          met = parseFloat(val) < parseFloat(condVal);
+          break;
+        case '>=':
+          met = parseFloat(val) >= parseFloat(condVal);
+          break;
+        case '<=':
+          met = parseFloat(val) <= parseFloat(condVal);
+          break;
+        case '=':
+          met = String(val) === condVal;
+          break;
+      }
       
       return met ? trueVal : falseVal;
     }
 
-    // 2. Trasformazioni (bytes, replace, join)
+    // 2. Condizionale esistenza (semplice)
+    if (part === 'exists') {
+      // Se arriva qui, è un esistenza senza vero/falso
+      return val !== undefined && val !== null && val !== '' ? val : '';
+    }
+
+    // 3. Trasformazioni
     if (part === 'bytes') {
       const b = parseFloat(val);
-      val = (isNaN(b) || b === 0) ? '' : (b >= 1e9 ? (b/1e9).toFixed(1) + ' GB' : Math.round(b/1e6) + ' MB');
+      if (isNaN(b) || b === 0) {
+        val = '';
+      } else if (b >= 1e9) {
+        val = (b/1e9).toFixed(1) + ' GB';
+      } else if (b >= 1e6) {
+        val = Math.round(b/1e6) + ' MB';
+      } else {
+        val = Math.round(b/1e3) + ' KB';
+      }
+    } else if (part === 'join') {
+      // join senza argomenti usa spazio
+      if (Array.isArray(val)) {
+        val = val.join(' ');
+      }
+    } else if (part.startsWith('join')) {
+      // join con separatore personalizzato
+      const m = part.match(/join\('(.*?)'\)/);
+      if (m && Array.isArray(val)) {
+        val = val.join(m[1]);
+      } else if (m && typeof val === 'string') {
+        val = val.split(' ').join(m[1]);
+      }
     } else if (part.startsWith('replace')) {
       const m = part.match(/replace\('(.*?)','(.*?)'\)/);
-      if (m) val = String(val ?? '').split(m[1]).join(m[2]);
+      if (m) {
+        val = String(val ?? '').split(m[1]).join(m[2]);
+      }
+    } else if (part.startsWith('replace')) {
+      // Formato alternativo: replace('old','new')
+      const m = part.match(/replace\('(.*?)','(.*?)'\)/);
+      if (m) {
+        val = String(val ?? '').split(m[1]).join(m[2]);
+      }
     }
   }
 
