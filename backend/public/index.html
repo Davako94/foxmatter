@@ -56,6 +56,7 @@ body {
   user-select: none;
 }
 .tab:hover { border-color: #444; color: var(--text); }
+.tab img { width: 16px; height: 16px; object-fit: contain; pointer-events: none; }
 
 /* State Engines via attribute mapping */
 [data-provider="stremio"] #tab-stremio {
@@ -179,8 +180,12 @@ input[type=email], input[type=password] {
   
   <div id="login-card">
     <div class="tabs">
-      <button type="button" class="tab" id="tab-stremio">STREMIO</button>
-      <button type="button" class="tab" id="tab-nuvio">NUVIO</button>
+      <button type="button" class="tab" id="tab-stremio">
+        <img src="stremio.png" alt="" onerror="this.style.display='none'"> STREMIO
+      </button>
+      <button type="button" class="tab" id="tab-nuvio">
+        <img src="nuvio.png" alt="" onerror="this.style.display='none'"> NUVIO
+      </button>
     </div>
 
     <label class="field-label">Email Address</label>
@@ -386,23 +391,11 @@ function executeLogout() {
   switchProvider('stremio');
 }
 
-// ── DIAGNOSTIC ACTION VERIFICATION ─────────────────────────────────────────
+// ── Action Event Binding Routine ───────────────────────────────────────────
 function applyEventBindings() {
-  document.getElementById('tab-stremio').addEventListener('click', () => {
-    alert('Stremio Tab Clicked!');
-    switchProvider('stremio');
-  });
-
-  document.getElementById('tab-nuvio').addEventListener('click', () => {
-    alert('Nuvio Tab Clicked!');
-    switchProvider('nuvio');
-  });
-
-  document.getElementById('login-btn').addEventListener('click', () => {
-    alert('Login Button Clicked!');
-    triggerLogin();
-  });
-
+  document.getElementById('tab-stremio').addEventListener('click', () => switchProvider('stremio'));
+  document.getElementById('tab-nuvio').addEventListener('click', () => switchProvider('nuvio'));
+  document.getElementById('login-btn').addEventListener('click', triggerLogin);
   document.getElementById('logout-btn').addEventListener('click', executeLogout);
 
   const copyBtn = document.getElementById('copy-btn');
