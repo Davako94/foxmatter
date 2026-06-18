@@ -6,6 +6,7 @@ const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
 const rateLimit = require('express-rate-limit');
+const path = require('path');
 
 const authRoutes = require('./routes/auth');
 const addonRoutes = require('./routes/addons');
@@ -13,15 +14,14 @@ const configRoutes = require('./routes/config');
 const proxyRoutes = require('./routes/proxy');
 const { errorHandler } = require('./middleware/errorHandler');
 const { logger } = require('./utils/logger');
+const { verifyToken } = require('./utils/jwt');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
+const BASE_URL = process.env.BASE_URL || 'http://localhost:3001';
 
-// ─── Security middleware ───────────────────────────────────────────────────
-app.use(helmet({
-  crossOriginEmbedderPolicy: false, // Required for Stremio addon protocol
-}));
-
+// ─── Security ──────────────────────────────────────────────────────────────
+app.use(helmet({ crossOriginEmbedderPolicy: false }));
 app.use(cors({
   origin: process.env.NODE_ENV === 'production'
     ? [process.env.FRONTEND_URL, /\.foxmatter\.app$/]
@@ -33,43 +33,56 @@ app.use(cors({
 const limiter = rateLimit({
   windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000,
   max: parseInt(process.env.RATE_LIMIT_MAX) || 100,
-  standardHeaders: true,
-  legacyHeaders: false,
+  standardHeaders: true, legacyHeaders: false,
 });
-
-// Proxy endpoints need higher limits (Stremio calls them frequently)
 const proxyLimiter = rateLimit({
-  windowMs: 60 * 1000,
-  max: 500,
-  standardHeaders: true,
-  legacyHeaders: false,
+  windowMs: 60 * 1000, max: 500,
+  standardHeaders: true, legacyHeaders: false,
 });
 
 // ─── Parsing & logging ─────────────────────────────────────────────────────
 app.use(express.json({ limit: '1mb' }));
 app.use(morgan('combined', { stream: { write: (msg) => logger.info(msg.trim()) } }));
 
-// ─── Routes ───────────────────────────────────────────────────────────────
-app.use('/api/auth', limiter, authRoutes);
+// ─── Static files (configure page) ────────────────────────────────────────
+app.use(express.static(path.join(__dirname, '../public')));
+
+// ─── API Routes ───────────────────────────────────────────────────────────
+app.use('/api/auth',   limiter, authRoutes);
 app.use('/api/addons', limiter, addonRoutes);
 app.use('/api/config', limiter, configRoutes);
-
-// Proxy routes: /:userId/:addonSlug/... - Higher rate limits, no auth middleware
-// (auth is validated per-request via userId token in the URL itself)
 app.use('/proxy', proxyLimiter, proxyRoutes);
 
-// Health check
+// ─── Health check ──────────────────────────────────────────────────────────
 app.get('/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+  res.json({ status: 'ok', version: '1.0.0', timestamp: new Date().toISOString() });
 });
 
-// ─── Error handling ────────────────────────────────────────────────────────
+// ─── /api/me — decode JWT → return userId + install URLs ──────────────────
+app.get('/api/me', (req, res) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader?.startsWith('Bearer ')) {
+    return res.status(401).json({ error: 'Provide: Authorization: Bearer <token>' });
+  }
+  try {
+    const payload = verifyToken(authHeader.slice(7));
+    res.json({
+      userId:            payload.userId,
+      stremioId:         payload.stremioId,
+      email:             payload.email,
+      installUrl:        `${BASE_URL}/proxy/${payload.userId}/manifest.json`,
+      stremioInstallUrl: `stremio://${BASE_URL.replace(/^https?:\/\//, '')}/proxy/${payload.userId}/manifest.json`,
+    });
+  } catch {
+    res.status(401).json({ error: 'Invalid or expired token' });
+  }
+});
+
+// ─── Error handler (must be last) ─────────────────────────────────────────
 app.use(errorHandler);
 
 app.listen(PORT, () => {
-  logger.info(`Foxmatter backend running on port ${PORT}`);
-  logger.info(`Environment: ${process.env.NODE_ENV}`);
-  logger.info(`Proxy base URL: ${process.env.BASE_URL}/proxy`);
+  logger.info(`Foxmatter running on port ${PORT} — ${BASE_URL}`);
 });
 
 module.exports = app;
