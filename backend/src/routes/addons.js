@@ -39,19 +39,23 @@ router.get('/', asyncHandler(async (req, res) => {
   const config       = await getUserConfig(req.user.userId);
   const configuredIds = new Set((config?.addonConfigs || []).map(a => a.addonId));
 
-  const annotated = result.addons.map(addon => ({
-    ...addon,
-    isConfigured: configuredIds.has(addon.id),
-    proxyUrl: addon.isProxiable
-      ? `${BASE_URL}/proxy/${req.user.userId}/${addon.slug}/manifest.json`
-      : null,
-  }));
+  const annotated = result.addons.map(addon => {
+    // Paracadute: forziamo true se l'addon ha esplicitamente delle risorse compatibili con gli stream
+    const canProxy = addon.isProxiable || addon.resources?.includes('stream');
+    return {
+      ...addon,
+      isProxiable: canProxy,
+      isConfigured: configuredIds.has(addon.id),
+      proxyUrl: canProxy
+        ? `${BASE_URL}/proxy/${req.user.userId}/${addon.slug}/manifest.json`
+        : null,
+    };
+  });
 
   res.json({ addons: annotated, total: annotated.length, provider: user.provider });
 }));
 
 // ─── POST /api/addons/sync ─────────────────────────────────────────────────
-// Risincronizza gli addon dal provider e li aggiunge alla config se nuovi
 router.post('/sync', asyncHandler(async (req, res) => {
   const user = await getUserById(req.user.userId);
   if (!user) return res.status(404).json({ error: 'Utente non trovato' });
@@ -73,7 +77,7 @@ router.post('/sync', asyncHandler(async (req, res) => {
 
   const existingIds = new Set(currentConfig.addonConfigs.map(a => a.addonId));
   const newAddons   = result.addons
-    .filter(a => !existingIds.has(a.id) && a.isProxiable)
+    .filter(a => !existingIds.has(a.id) && (a.isProxiable || a.resources?.includes('stream')))
     .map(addon => ({
       addonId:             addon.id,
       slug:                addon.slug,

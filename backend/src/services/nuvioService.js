@@ -1,8 +1,4 @@
 // services/nuvioService.js - Nuvio API interactions for Foxmatter
-//
-// Nuvio usa Supabase Auth (GoTrue) su web.nuvioapp.space.
-// Gli addon sono salvati nella tabella `addons` del Supabase di Nuvio.
-
 const axios = require('axios');
 const { logger } = require('../utils/logger');
 const { normalizeAddon } = require('./stremioService');
@@ -78,9 +74,6 @@ async function nuvioAuth(email, password) {
 /**
  * Fetch installed addons for a Nuvio user.
  * Reads from the `addons` table in Nuvio's Supabase.
- *
- * Expected row shape (best guess from your schema):
- *   { id, user_id, manifest_url, manifest (jsonb), enabled, created_at }
  */
 async function fetchNuvioAddons(accessToken, nuvioUserId) {
   try {
@@ -134,24 +127,23 @@ async function refreshNuvioToken(refreshToken) {
 
 /**
  * Normalize a Nuvio addon DB row into our standard format.
- * Handles two possible shapes:
- *   A) manifest_url + embedded manifest JSON  (full manifest stored in DB)
- *   B) manifest_url only                      (we fetch manifest on the fly)
  */
 function normalizeNuvioAddon(row) {
   try {
     // Shape A: manifest already in the row
     if (row.manifest && typeof row.manifest === 'object') {
+      const transportUrl = row.manifest_url || row.manifest?.transportUrl;
+      if (!transportUrl) return null;
+      
       return normalizeAddon({
-        transportUrl: row.manifest_url || row.manifest?.transportUrl,
+        transportUrl: transportUrl.replace(/\/manifest\.json$/, ''),
         manifest: row.manifest,
       });
     }
 
-    // Shape B: only a URL — we'll resolve the manifest later (on sync)
+    // Shape B: only a URL
     if (row.manifest_url) {
       const url = row.manifest_url;
-      // Extract a basic slug from the URL
       const slug = url
         .replace(/^https?:\/\//, '')
         .replace(/\/manifest\.json$/, '')

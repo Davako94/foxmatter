@@ -151,7 +151,15 @@ async function fetchUpstreamStreams(transportUrl, type, id) {
  */
 function normalizeAddon(addon) {
   const manifest = addon.manifest || {};
+  const resources = manifest.resources || [];
   
+  // Controllo robusto senza opzioni sintattiche errate (?.) sulle funzioni di array
+  const hasStreamResource = resources.some(r => {
+    if (typeof r === 'string') return r === 'stream';
+    if (r && typeof r === 'object') return r.name === 'stream';
+    return false;
+  });
+
   return {
     id: manifest.id || addon.transportUrl,
     name: manifest.name || 'Unknown Addon',
@@ -161,13 +169,11 @@ function normalizeAddon(addon) {
     transportUrl: addon.transportUrl,
     types: manifest.types || [],
     catalogs: manifest.catalogs || [],
-    resources: manifest.resources || [],
+    resources: resources,
     idPrefixes: manifest.idPrefixes || [],
     behaviorHints: manifest.behaviorHints || {},
-    // Derived properties
     slug: slugify(manifest.id || manifest.name || 'addon'),
-    isProxiable: Boolean(manifest.resources?.includes('stream') || 
-      manifest.resources?.some?.(r => r.name === 'stream' || r === 'stream')),
+    isProxiable: Boolean(hasStreamResource),
   };
 }
 
