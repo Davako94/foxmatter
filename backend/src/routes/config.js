@@ -53,6 +53,36 @@ const fullConfigSchema = z.object({
   }).optional(),
 });
 
+/**
+ * Helper interno per convertire vecchi placeholder errati tipo {title} nel formato corretto {stream.title}
+ * per prevenire i blocchi di validazione.
+ */
+function sanitizeTemplates(config) {
+  if (!config) return config;
+  
+  if (config.addonConfigs && Array.isArray(config.addonConfigs)) {
+    config.addonConfigs = config.addonConfigs.map(addon => {
+      if (addon.descriptionTemplate) {
+        addon.descriptionTemplate = addon.descriptionTemplate.replace(/\{title(::|\})/g, '{stream.title$1');
+      }
+      if (addon.nameTemplate) {
+        addon.nameTemplate = addon.nameTemplate.replace(/\{title(::|\})/g, '{stream.title$1');
+      }
+      return addon;
+    });
+  }
+
+  if (config.settings) {
+    if (config.settings.defaultDescriptionTemplate) {
+      config.settings.defaultDescriptionTemplate = config.settings.defaultDescriptionTemplate.replace(/\{title(::|\})/g, '{stream.title$1');
+    }
+    if (config.settings.defaultNameTemplate) {
+      config.settings.defaultNameTemplate = config.settings.defaultNameTemplate.replace(/\{title(::|\})/g, '{stream.title$1');
+    }
+  }
+  return config;
+}
+
 // ─── GET /api/config ───────────────────────────────────────────────────────
 router.get('/', asyncHandler(async (req, res) => {
   const config = await getUserConfig(req.user.userId);
@@ -66,7 +96,9 @@ router.get('/', asyncHandler(async (req, res) => {
 
 // ─── PUT /api/config ───────────────────────────────────────────────────────
 router.put('/', asyncHandler(async (req, res) => {
-  const parsed = fullConfigSchema.safeParse(req.body);
+  // Sanifichiamo le stringhe dei template ereditati o caricati prima della validazione strutturale
+  const sanitizedBody = req.body ? sanitizeTemplates(req.body) : req.body;
+  const parsed = fullConfigSchema.safeParse(sanitizedBody);
   
   if (!parsed.success) {
     return res.status(400).json({
@@ -136,13 +168,16 @@ router.post('/addons/:slug', asyncHandler(async (req, res) => {
     if (badges !== undefined) currentConfig.addonConfigs[addonIndex].badges = badges;
   }
 
-  const validationResult = validateConfig(currentConfig);
+  // Sanificazione finale dell'oggetto modificato prima del check finale
+  const sanitizedConfig = sanitizeTemplates(currentConfig);
+
+  const validationResult = validateConfig(sanitizedConfig);
   if (!validationResult.valid) {
     return res.status(400).json({ error: 'Configurazione non valida', details: validationResult.errors });
   }
 
-  await saveUserConfig(req.user.userId, currentConfig);
-  res.json({ success: true, addonConfig: currentConfig.addonConfigs[addonIndex] });
+  await saveUserConfig(req.user.userId, sanitizedConfig);
+  res.json({ success: true, addonConfig: sanitizedConfig.addonConfigs[addonIndex] });
 }));
 
 // ─── POST /api/config/import ───────────────────────────────────────────────
@@ -225,16 +260,38 @@ router.post('/sync-addons', asyncHandler(async (req, res) => {
   const currentConfig = await getUserConfig(req.user.userId) || getDefaultConfig();
   const existingAddonIds = new Set(currentConfig.addonConfigs.map(a => a.addonId));
   
+  // Lista nera esplicita e controlli per escludere cataloghi fissi o meta-provider non video
+  const nonStreamBlacklist = [
+    'cinemeta', 'opensubtitles', 'trakt', 'kitsu', 'anime-kitsu', 
+    'tmdb-addon', 'imdb', 'mal-', 'myanimelist', 'local-files'
+  ];
+
   const newAddons = result.addons
-    .filter(a => !existingAddonIds.has(a.id) && a.isProxiable)
+    .filter(addon => {
+      // 1. Deve essere proxiabile e non ancora registrato
+      if (existingAddonIds.has(addon.id) || !addon.isProxiable) return false;
+
+      // 2. Controllo tramite blacklist testuale dello slug o ID
+      const targetSlug = (addon.slug || '').toLowerCase();
+      const targetId = (addon.id || '').toLowerCase();
+      if (nonStreamBlacklist.some(item => targetSlug.includes(item) || targetId.includes(item))) return false;
+
+      // 3. SE l'oggetto addon espone le sue risorse dichiarate, deve supportare la risorsa 'stream'
+      if (addon.resources && Array.isArray(addon.resources)) {
+        const hasStreams = addon.resources.some(r => r === 'stream' || (r && r.name === 'stream'));
+        if (!hasStreams) return false;
+      }
+      
+      return true;
+    })
     .map(addon => ({
       addonId: addon.id,
       slug: addon.slug,
       name: addon.name,
       transportUrl: addon.transportUrl,
       enabled: true,
-      idPrefixes: addon.idPrefixes,
-      types: addon.types,
+      idPrefixes: addon.idPrefixes || [],
+      types: addon.types || [],
       logo: addon.logo,
       nameTemplate: null,
       titleTemplate: null,
@@ -253,7 +310,7 @@ router.post('/sync-addons', asyncHandler(async (req, res) => {
     success: true,
     total: result.addons.length,
     added: newAddons.length,
-    addons: result.addons,
+    addons: updatedConfig.addonConfigs, // Ritorna la lista pulita degli addon video effettivamente proxiati
   });
 }));
 
