@@ -238,13 +238,10 @@ let provider = 'stremio';
 let token = null;
 let savedProvider = 'stremio';
 
-// Safely probe localStorage wrapped inside a sandbox catch
 try {
   token = localStorage.getItem('fm_token');
   savedProvider = localStorage.getItem('fm_provider') || 'stremio';
-} catch (e) {
-  console.warn("Storage restricted. Running in session volatile state.");
-}
+} catch (e) {}
 
 // ── Context Swapping Core ──────────────────────────────────────────────────
 function switchProvider(target) {
@@ -253,19 +250,16 @@ function switchProvider(target) {
     localStorage.setItem('fm_provider', target);
   } catch(e){}
 
-  // Switch container visibility attribute state
   const container = document.getElementById('main-container');
   if (container) {
     container.setAttribute('data-provider', target);
   }
 
-  // Rewrite Action Label Text
   const loginBtn = document.getElementById('login-btn');
   if (loginBtn) {
     loginBtn.textContent = target === 'stremio' ? 'Log In with Stremio' : 'Log In with Nuvio';
   }
 
-  // Rewrite instructions descriptive elements
   const hint = document.getElementById('login-hint');
   if (hint) {
     hint.innerHTML = target === 'stremio'
@@ -297,7 +291,6 @@ async function triggerLogin() {
   const emailVal = document.getElementById('email').value.trim();
   const passVal = document.getElementById('password').value;
 
-  // Immediate frontend intercept validation
   if (!emailVal || !passVal) {
     showError('Please fill in all fields.');
     return;
@@ -363,4 +356,91 @@ function renderInstallationScreen(me) {
   } catch(e){}
 
   const badge = document.getElementById('provider-badge');
-  if (badge) badge.textContent = currentP === 'nu
+  if (badge) badge.textContent = currentP === 'nuvio' ? 'Nuvio' : 'Stremio';
+
+  document.getElementById('provider-name-label').textContent = currentP === 'nuvio' ? 'Nuvio' : 'Stremio';
+
+  const installBtn = document.getElementById('install-btn');
+  installBtn.textContent = currentP === 'nuvio' ? '⚡ Install in Nuvio' : '⚡ Install in Stremio';
+
+  const BASE = window.location.origin;
+  const userId = me.userId;
+  const httpUrl = `${BASE}/proxy/${userId}/manifest.json`;
+  const stremioUrl = `stremio://${window.location.host}/proxy/${userId}/manifest.json`;
+
+  installBtn.href = currentP === 'nuvio' ? httpUrl : stremioUrl; 
+  document.getElementById('url-text').textContent = httpUrl;
+}
+
+// ── Session Purging ────────────────────────────────────────────────────────
+function executeLogout() {
+  try {
+    localStorage.removeItem('fm_token');
+    localStorage.removeItem('fm_provider');
+  } catch(e){}
+  token = null;
+  document.getElementById('install-card').style.display = 'none';
+  document.getElementById('login-card').style.display = 'block';
+  document.getElementById('email').value = '';
+  document.getElementById('password').value = '';
+  switchProvider('stremio');
+}
+
+// ── DIAGNOSTIC ACTION VERIFICATION ─────────────────────────────────────────
+function applyEventBindings() {
+  document.getElementById('tab-stremio').addEventListener('click', () => {
+    alert('Stremio Tab Clicked!');
+    switchProvider('stremio');
+  });
+
+  document.getElementById('tab-nuvio').addEventListener('click', () => {
+    alert('Nuvio Tab Clicked!');
+    switchProvider('nuvio');
+  });
+
+  document.getElementById('login-btn').addEventListener('click', () => {
+    alert('Login Button Clicked!');
+    triggerLogin();
+  });
+
+  document.getElementById('logout-btn').addEventListener('click', executeLogout);
+
+  const copyBtn = document.getElementById('copy-btn');
+  if (copyBtn) {
+    copyBtn.addEventListener('click', () => {
+      const url = document.getElementById('url-text').textContent;
+      navigator.clipboard.writeText(url).then(() => {
+        copyBtn.textContent = '✓ Copied';
+        setTimeout(() => copyBtn.textContent = 'Copy', 1800);
+      });
+    });
+  }
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && document.getElementById('login-card').style.display !== 'none') {
+      triggerLogin();
+    }
+  });
+}
+
+// ── Initial Master Entry Execution Point ────────────────────────────────────
+async function masterBootstrap() {
+  applyEventBindings();
+  switchProvider(savedProvider);
+  
+  if (token) {
+    const activeSession = await verifyProfile(token);
+    if (!activeSession) {
+      try { localStorage.removeItem('fm_token'); } catch(e){}
+    }
+  }
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', masterBootstrap);
+} else {
+  masterBootstrap();
+}
+</script>
+</body>
+</html>
