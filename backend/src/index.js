@@ -21,12 +21,16 @@ app.set('trust proxy', 1); // se dietro a un reverse proxy (es. Heroku, Cloudfla
 const PORT = process.env.PORT || 3001;
 const BASE_URL = process.env.BASE_URL || 'http://localhost:3001';
 
-// ─── Security (Helmet configurato per consentire gli script inline della UI) ───
+// ─── Security (Helmet configurato per sbloccare gli script-attr e gli stili inline della UI) ───
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       ...helmet.contentSecurityPolicy.getDefaultDirectives(),
       "script-src": ["'self'", "'unsafe-inline'"],
+      // ABILITA GLI EVENTI INLINE (Risolve il blocco su onclick="window.saveAddonConfig()")
+      "script-src-attr": ["'unsafe-inline'"],
+      // ABILITA GLI STILI INLINE (Risolve il blocco su this.style.display='none')
+      "style-src": ["'self'", "'unsafe-inline'"],
     },
   },
   crossOriginEmbedderPolicy: false
