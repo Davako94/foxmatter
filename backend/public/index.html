@@ -1054,7 +1054,7 @@ function renderAddonList(){
     var enabled=saved.enabled!==false;
     var initials=(addon.name||'?').replace(/[^A-Za-z0-9]/g,'').slice(0,3).toUpperCase();
     var card=document.createElement('div');
-    card.className='addon-card';card.id='card-'+addon.id;
+    card.className='addon-card open';card.id='card-'+addon.id;
     card.innerHTML='<div class="addon-header" onclick="toggleCard(\''+addon.id+'\')">'+
       '<div class="addon-logo-fb">'+initials+'</div>'+
       '<span class="addon-title">'+addon.name+'</span>'+
