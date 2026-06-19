@@ -72,7 +72,7 @@ async function fetchNuvioAddons(accessToken, nuvioUserId) {
       params: { user_id: `eq.${nuvioUserId}`, enabled: 'eq.true', select: '*', order: 'created_at.asc' }
     });
 
-    const rows = Array.isArray(res.data) ? res.data : (Array.isArray(res.data?.data) ? res.data.data : (Array.isArray(res.data?.addons) ? res.data.addons : []));
+    const rows = res.data || [];
     const seenUrls = new Set();
     const addons = [];
 
@@ -93,7 +93,7 @@ async function fetchNuvioAddons(accessToken, nuvioUserId) {
 
 function normalizeNuvioAddon(row) {
   try {
-    const targetUrl = row.url || row.manifest_url || row.manifestUrl || row.transportUrl || row.transport_url || row.manifest?.transportUrl || row.manifest?.url;
+    const targetUrl = row.url || row.manifest_url || row.manifest?.transportUrl;
     if (!targetUrl) return null;
     const cleanTransportUrl = targetUrl.replace(/\/manifest\.json$/, '').replace(/\/$/, '');
 
