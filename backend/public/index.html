@@ -364,6 +364,15 @@ function parseTemplate(template, ctx) {
 }
 
 function evalExpr(expr, ctx) {
+  var conditionalTail = expr.match(/^(.*)\["(.*?)"(?:\s*\|\|\s*"(.*?)")?\]$/);
+  if (conditionalTail) {
+    var conditionExpr = conditionalTail[1].trim();
+    var trueVal = conditionalTail[2] || '';
+    var falseVal = conditionalTail[3] || '';
+    var met = evaluateConditionExpr(conditionExpr, ctx);
+    var chosen = met ? trueVal : falseVal;
+    return chosen.indexOf('{') >= 0 ? parseTemplate(chosen, ctx) : chosen;
+  }
   if (expr.includes('::xor::')) {
     var xorParts = expr.split('::xor::');
     var xorCount = 0;
@@ -573,6 +582,33 @@ function evalExpr(expr, ctx) {
     }
   }
   return val != null ? String(val) : '';
+}
+
+function evaluateConditionExpr(expr, ctx) {
+  if (expr.includes('::or::')) {
+    var orParts = expr.split('::or::');
+    for (var oi = 0; oi < orParts.length; oi++) {
+      if (evaluateConditionExpr(orParts[oi].trim(), ctx)) return true;
+    }
+    return false;
+  }
+  if (expr.includes('::and::')) {
+    var andParts = expr.split('::and::');
+    for (var ai = 0; ai < andParts.length; ai++) {
+      if (!evaluateConditionExpr(andParts[ai].trim(), ctx)) return false;
+    }
+    return true;
+  }
+  if (expr.includes('::xor::')) {
+    var xorParts = expr.split('::xor::');
+    var count = 0;
+    for (var xi = 0; xi < xorParts.length; xi++) {
+      if (evaluateConditionExpr(xorParts[xi].trim(), ctx)) count++;
+    }
+    return count % 2 === 1;
+  }
+  var r = evalExpr(expr, ctx);
+  return r !== '' && r != null && r !== false;
 }
 
 function getPath(obj, path) {
@@ -799,6 +835,11 @@ async function loadConfigScreen(){
   var gc=config?.globalTemplate||{};
   if(gc.titleTemplate) document.getElementById('global-name').value=gc.titleTemplate;
   if(gc.descriptionTemplate) document.getElementById('global-desc').value=gc.descriptionTemplate;
+  if(prov==='nuvio' && (gc.titleTemplate || gc.descriptionTemplate) && Array.isArray(config?.addonConfigs)){
+    config.addonConfigs = config.addonConfigs.map(function(a){
+      return Object.assign({}, a, { titleTemplate: null, descriptionTemplate: null });
+    });
+  }
 
   fillSnippets('gsnip-name',SNIP_N,'global-name',function(){updateGlobalPreview();});
   fillSnippets('gsnip-desc',SNIP_D,'global-desc',function(){updateGlobalPreview();});

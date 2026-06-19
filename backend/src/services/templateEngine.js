@@ -19,8 +19,18 @@ function parseTemplate(template, ctx) {
 }
 
 function evaluateExpression(expr, ctx) {
+  const conditionalTail = expr.match(/^(.*)\["(.*?)"(?:\s*\|\|\s*"(.*?)")?\]$/);
+  if (conditionalTail) {
+    const conditionExpr = conditionalTail[1].trim();
+    const trueVal = conditionalTail[2] || '';
+    const falseVal = conditionalTail[3] || '';
+    const met = evaluateConditionExpr(conditionExpr, ctx);
+    const chosen = met ? trueVal : falseVal;
+    return chosen.includes('{') ? parseTemplate(chosen, ctx) : chosen;
+  }
+
   if (expr.includes('::or::') || expr.includes('::and::') || expr.includes('::xor::')) {
-    return evaluateLogical(expr, ctx);
+    return evaluateConditionExpr(expr, ctx);
   }
 
   const parts = expr.split('::');
@@ -160,6 +170,35 @@ function evaluateLogical(expr, ctx) {
   }
 
   return '';
+}
+
+function evaluateConditionExpr(expr, ctx) {
+  if (expr.includes('::or::')) {
+    const parts = expr.split('::or::');
+    for (const p of parts) {
+      if (evaluateConditionExpr(p.trim(), ctx)) return true;
+    }
+    return false;
+  }
+
+  if (expr.includes('::and::')) {
+    const parts = expr.split('::and::');
+    for (const p of parts) {
+      if (!evaluateConditionExpr(p.trim(), ctx)) return false;
+    }
+    return true;
+  }
+
+  if (expr.includes('::xor::')) {
+    const parts = expr.split('::xor::');
+    let count = 0;
+    for (const p of parts) {
+      if (evaluateConditionExpr(p.trim(), ctx)) count++;
+    }
+    return count % 2 === 1;
+  }
+
+  return isTruthy(evaluateExpression(expr, ctx));
 }
 
 function isTruthy(value) {
