@@ -7,7 +7,8 @@ const { asyncHandler } = require('../middleware/errorHandler');
 const { 
   getUserConfig, 
   saveUserConfig, 
-  validateConfig 
+  validateConfig,
+  getDefaultConfig,
 } = require('../services/configService');
 const { fetchUserAddons } = require('../services/stremioService');
 const { getUserById } = require('../services/userService');
@@ -23,7 +24,7 @@ const badgeSchema = z.object({
   pattern: z.string().min(1),
   label: z.string().min(1).max(20),
   priority: z.number().int().min(1).max(100).default(50),
-  color: z.string().optional(), // CSS color for UI display
+  color: z.string().optional(),
   emoji: z.string().optional(),
 });
 
@@ -47,39 +48,43 @@ const fullConfigSchema = z.object({
   globalBadges: z.array(badgeSchema).default([]),
   addonConfigs: z.array(addonConfigSchema).default([]),
   settings: z.object({
-    defaultNameTemplate: z.string().optional(),
-    defaultDescriptionTemplate: z.string().optional(),
+    globalNameTemplate: z.string().nullable().optional(),
+    globalDescriptionTemplate: z.string().nullable().optional(),
     mergeStreams: z.boolean().default(false),
   }).optional(),
 });
 
-/**
- * Helper interno per convertire vecchi placeholder errati tipo {title} nel formato corretto {stream.title}
- * per prevenire i blocchi di validazione.
- */
+// ─── Helper per sanitizzazione template ──────────────────────────────────
+
 function sanitizeTemplates(config) {
   if (!config) return config;
   
+  if (config.settings) {
+    if (config.settings.globalNameTemplate) {
+      config.settings.globalNameTemplate = config.settings.globalNameTemplate
+        .replace(/\{title(::|\})/g, '{stream.title$1')
+        .replace(/\{name(::|\})/g, '{stream.name$1');
+    }
+    if (config.settings.globalDescriptionTemplate) {
+      config.settings.globalDescriptionTemplate = config.settings.globalDescriptionTemplate
+        .replace(/\{title(::|\})/g, '{stream.title$1')
+        .replace(/\{name(::|\})/g, '{stream.name$1');
+    }
+  }
+  
   if (config.addonConfigs && Array.isArray(config.addonConfigs)) {
     config.addonConfigs = config.addonConfigs.map(addon => {
-      if (addon.descriptionTemplate) {
-        addon.descriptionTemplate = addon.descriptionTemplate.replace(/\{title(::|\})/g, '{stream.title$1');
-      }
-      if (addon.nameTemplate) {
-        addon.nameTemplate = addon.nameTemplate.replace(/\{title(::|\})/g, '{stream.title$1');
-      }
+      ['nameTemplate', 'titleTemplate', 'descriptionTemplate'].forEach(field => {
+        if (addon[field]) {
+          addon[field] = addon[field]
+            .replace(/\{title(::|\})/g, '{stream.title$1')
+            .replace(/\{name(::|\})/g, '{stream.name$1');
+        }
+      });
       return addon;
     });
   }
-
-  if (config.settings) {
-    if (config.settings.defaultDescriptionTemplate) {
-      config.settings.defaultDescriptionTemplate = config.settings.defaultDescriptionTemplate.replace(/\{title(::|\})/g, '{stream.title$1');
-    }
-    if (config.settings.defaultNameTemplate) {
-      config.settings.defaultNameTemplate = config.settings.defaultNameTemplate.replace(/\{title(::|\})/g, '{stream.title$1');
-    }
-  }
+  
   return config;
 }
 
@@ -87,8 +92,18 @@ function sanitizeTemplates(config) {
 router.get('/', asyncHandler(async (req, res) => {
   const config = await getUserConfig(req.user.userId);
   
+  let finalConfig = config || getDefaultConfig();
+  
+  if (!finalConfig.settings) {
+    finalConfig.settings = {
+      globalNameTemplate: null,
+      globalDescriptionTemplate: null,
+      mergeStreams: false,
+    };
+  }
+  
   res.json({
-    config: config || getDefaultConfig(),
+    config: finalConfig,
     installUrl: `${BASE_URL}/proxy/${req.user.userId}/manifest.json`,
     stremioInstallUrl: `stremio://${BASE_URL.replace(/^https?:\/\//, '')}/proxy/${req.user.userId}/manifest.json`,
   });
@@ -96,8 +111,7 @@ router.get('/', asyncHandler(async (req, res) => {
 
 // ─── PUT /api/config ───────────────────────────────────────────────────────
 router.put('/', asyncHandler(async (req, res) => {
-  // Sanifichiamo le stringhe dei template ereditati o caricati prima della validazione strutturale
-  const sanitizedBody = req.body ? sanitizeTemplates(req.body) : req.body;
+  const sanitizedBody = sanitizeTemplates(req.body);
   const parsed = fullConfigSchema.safeParse(sanitizedBody);
   
   if (!parsed.success) {
@@ -109,7 +123,11 @@ router.put('/', asyncHandler(async (req, res) => {
 
   const config = parsed.data;
   
-  // Validate templates have valid variables
+  if (config.settings) {
+    if (config.settings.globalNameTemplate === '') config.settings.globalNameTemplate = null;
+    if (config.settings.globalDescriptionTemplate === '') config.settings.globalDescriptionTemplate = null;
+  }
+  
   const validationResult = validateConfig(config);
   if (!validationResult.valid) {
     return res.status(400).json({
@@ -127,7 +145,7 @@ router.put('/', asyncHandler(async (req, res) => {
   });
 }));
 
-// ─── POST /api/config/addons/:slug (Nuovo Endpoint stile aiostreams) ───────
+// ─── POST /api/config/addons/:slug ──────────────────────────────────────
 router.post('/addons/:slug', asyncHandler(async (req, res) => {
   const { slug } = req.params;
   const { 
@@ -140,14 +158,15 @@ router.post('/addons/:slug', asyncHandler(async (req, res) => {
   } = req.body;
 
   const currentConfig = await getUserConfig(req.user.userId);
-  if (!currentConfig) return res.status(404).json({ error: 'Configurazione non trovata' });
+  if (!currentConfig) {
+    return res.status(404).json({ error: 'Configurazione non trovata' });
+  }
 
   const addonIndex = currentConfig.addonConfigs?.findIndex(a => a.slug === slug);
   if (addonIndex === -1 || addonIndex === undefined) {
     return res.status(404).json({ error: `Addon con slug "${slug}" non trovato` });
   }
 
-  // Se l'utente carica o passa un .json intero
   if (fullJsonOverride) {
     const parsedJson = typeof fullJsonOverride === 'string' ? JSON.parse(fullJsonOverride) : fullJsonOverride;
     
@@ -160,17 +179,14 @@ router.post('/addons/:slug', asyncHandler(async (req, res) => {
       enabled: parsedJson.enabled !== undefined ? parsedJson.enabled : currentConfig.addonConfigs[addonIndex].enabled,
     };
   } else {
-    // Aggiornamento parziale standard da form manuale
-    if (nameTemplate !== undefined) currentConfig.addonConfigs[addonIndex].nameTemplate = nameTemplate;
-    if (titleTemplate !== undefined) currentConfig.addonConfigs[addonIndex].titleTemplate = titleTemplate;
-    if (descriptionTemplate !== undefined) currentConfig.addonConfigs[addonIndex].descriptionTemplate = descriptionTemplate;
+    if (nameTemplate !== undefined) currentConfig.addonConfigs[addonIndex].nameTemplate = nameTemplate || null;
+    if (titleTemplate !== undefined) currentConfig.addonConfigs[addonIndex].titleTemplate = titleTemplate || null;
+    if (descriptionTemplate !== undefined) currentConfig.addonConfigs[addonIndex].descriptionTemplate = descriptionTemplate || null;
     if (enabled !== undefined) currentConfig.addonConfigs[addonIndex].enabled = enabled;
     if (badges !== undefined) currentConfig.addonConfigs[addonIndex].badges = badges;
   }
 
-  // Sanificazione finale dell'oggetto modificato prima del check finale
   const sanitizedConfig = sanitizeTemplates(currentConfig);
-
   const validationResult = validateConfig(sanitizedConfig);
   if (!validationResult.valid) {
     return res.status(400).json({ error: 'Configurazione non valida', details: validationResult.errors });
@@ -180,7 +196,7 @@ router.post('/addons/:slug', asyncHandler(async (req, res) => {
   res.json({ success: true, addonConfig: sanitizedConfig.addonConfigs[addonIndex] });
 }));
 
-// ─── POST /api/config/import ───────────────────────────────────────────────
+// ─── POST /api/config/import ─────────────────────────────────────────────
 router.post('/import', asyncHandler(async (req, res) => {
   const { json, merge = false } = req.body;
   
@@ -221,18 +237,30 @@ router.post('/import', asyncHandler(async (req, res) => {
   });
 }));
 
-// ─── GET /api/config/export ────────────────────────────────────────────────
+// ─── GET /api/config/export ──────────────────────────────────────────────
 router.get('/export', asyncHandler(async (req, res) => {
   const config = await getUserConfig(req.user.userId) || getDefaultConfig();
   const { format = 'foxmatter' } = req.query;
   
   let exported;
   
-  if (format === 'airstream') {
+  if (format === 'aiostreams') {
     exported = {
+      version: '1.0',
       badges: config.globalBadges,
-      global: true,
-      apply_to_all_addons: true,
+      addons: config.addonConfigs.map(a => ({
+        id: a.addonId,
+        name: a.name,
+        nameTemplate: a.nameTemplate,
+        titleTemplate: a.titleTemplate,
+        descriptionTemplate: a.descriptionTemplate,
+        badges: a.badges,
+        enabled: a.enabled,
+      })),
+      global: {
+        nameTemplate: config.settings?.globalNameTemplate || null,
+        descriptionTemplate: config.settings?.globalDescriptionTemplate || null,
+      }
     };
   } else {
     exported = config;
@@ -243,7 +271,7 @@ router.get('/export', asyncHandler(async (req, res) => {
   res.json(exported);
 }));
 
-// ─── POST /api/config/sync-addons ─────────────────────────────────────────
+// ─── POST /api/config/sync-addons ────────────────────────────────────────
 router.post('/sync-addons', asyncHandler(async (req, res) => {
   const user = await getUserById(req.user.userId);
   
@@ -260,39 +288,23 @@ router.post('/sync-addons', asyncHandler(async (req, res) => {
   const currentConfig = await getUserConfig(req.user.userId) || getDefaultConfig();
   const existingAddonIds = new Set(currentConfig.addonConfigs.map(a => a.addonId));
   
-  // Lista nera esplicita e controlli per escludere cataloghi fissi o meta-provider non video
-  const nonStreamBlacklist = [
-    'cinemeta', 'opensubtitles', 'trakt', 'kitsu', 'anime-kitsu', 
-    'tmdb-addon', 'imdb', 'mal-', 'myanimelist', 'local-files'
-  ];
-
+  // 🔥 FIX: Solo controllo base - isProxiable deve essere true
   const newAddons = result.addons
     .filter(addon => {
-      // 1. Deve essere proxiabile e non ancora registrato
-      if (existingAddonIds.has(addon.id) || !addon.isProxiable) return false;
-
-      // 2. Controllo tramite blacklist testuale dello slug o ID
-      const targetSlug = (addon.slug || '').toLowerCase();
-      const targetId = (addon.id || '').toLowerCase();
-      if (nonStreamBlacklist.some(item => targetSlug.includes(item) || targetId.includes(item))) return false;
-
-      // 3. SE l'oggetto addon espone le sue risorse dichiarate, deve supportare la risorsa 'stream'
-      if (addon.resources && Array.isArray(addon.resources)) {
-        const hasStreams = addon.resources.some(r => r === 'stream' || (r && r.name === 'stream'));
-        if (!hasStreams) return false;
-      }
-      
+      // Deve essere proxiabile e non già esistente
+      if (!addon.isProxiable) return false;
+      if (existingAddonIds.has(addon.id)) return false;
       return true;
     })
     .map(addon => ({
       addonId: addon.id,
-      slug: addon.slug,
-      name: addon.name,
-      transportUrl: addon.transportUrl,
+      slug: addon.slug || addon.id.toLowerCase(),
+      name: addon.name || addon.id,
+      transportUrl: addon.transportUrl || `https://${addon.id}.strem.fun/manifest.json`,
       enabled: true,
-      idPrefixes: addon.idPrefixes || [],
-      types: addon.types || [],
-      logo: addon.logo,
+      idPrefixes: addon.idPrefixes || ['tt'],
+      types: addon.types || ['movie', 'series'],
+      logo: addon.logo || null,
       nameTemplate: null,
       titleTemplate: null,
       descriptionTemplate: null,
@@ -310,11 +322,11 @@ router.post('/sync-addons', asyncHandler(async (req, res) => {
     success: true,
     total: result.addons.length,
     added: newAddons.length,
-    addons: updatedConfig.addonConfigs, // Ritorna la lista pulita degli addon video effettivamente proxiati
+    addons: updatedConfig.addonConfigs,
   });
 }));
 
-// ─── POST /api/config/preview ──────────────────────────────────────────────
+// ─── POST /api/config/preview ────────────────────────────────────────────
 router.post('/preview', asyncHandler(async (req, res) => {
   const { stream, config, addonId } = req.body;
   
@@ -332,7 +344,50 @@ router.post('/preview', asyncHandler(async (req, res) => {
   });
 }));
 
-// ─── Helpers ───────────────────────────────────────────────────────────────
+// ─── POST /api/config/apply-global ──────────────────────────────────────
+router.post('/apply-global', asyncHandler(async (req, res) => {
+  const { nameTemplate, descriptionTemplate } = req.body;
+  
+  const currentConfig = await getUserConfig(req.user.userId);
+  if (!currentConfig) {
+    return res.status(404).json({ error: 'Config not found' });
+  }
+  
+  if (!currentConfig.settings) currentConfig.settings = {};
+  currentConfig.settings.globalNameTemplate = nameTemplate || null;
+  currentConfig.settings.globalDescriptionTemplate = descriptionTemplate || null;
+  
+  if (currentConfig.addonConfigs) {
+    currentConfig.addonConfigs = currentConfig.addonConfigs.map(addon => {
+      if (!addon.nameTemplate || addon.nameTemplate.trim() === '') {
+        addon.nameTemplate = nameTemplate || null;
+      }
+      if (!addon.descriptionTemplate || addon.descriptionTemplate.trim() === '') {
+        addon.descriptionTemplate = descriptionTemplate || null;
+      }
+      return addon;
+    });
+  }
+  
+  const validationResult = validateConfig(currentConfig);
+  if (!validationResult.valid) {
+    return res.status(400).json({ 
+      error: 'Configuration validation failed', 
+      details: validationResult.errors 
+    });
+  }
+  
+  await saveUserConfig(req.user.userId, currentConfig);
+  
+  res.json({
+    success: true,
+    message: 'Global templates applied to all addons',
+    config: currentConfig,
+  });
+}));
+
+// ─── Helpers ──────────────────────────────────────────────────────────────
+
 function normalizeImportedBadges(data) {
   if (Array.isArray(data?.badges)) {
     return data.badges.filter(b => b.pattern && b.label);
@@ -341,26 +396,6 @@ function normalizeImportedBadges(data) {
     return data.filter(b => b.pattern && b.label);
   }
   return [];
-}
-
-function getDefaultConfig() {
-  return {
-    globalBadges: [
-      { pattern: '4k|2160p|uhd', label: '4K', priority: 1 },
-      { pattern: 'remux', label: 'REMUX', priority: 2 },
-      { pattern: 'dolby.?vision|\\bdv\\b', label: 'DV', priority: 3 },
-      { pattern: 'dolby.?atmos|atmos', label: 'Atmos', priority: 4 },
-      { pattern: 'hdr10\\+|hdr10plus', label: 'HDR10+', priority: 5 },
-      { pattern: 'hdr', label: 'HDR', priority: 6 },
-      { pattern: 'hevc|x265|h\\.265', label: 'HEVC', priority: 7 },
-      { pattern: '1080p', label: '1080p', priority: 8 },
-      { pattern: 'web.?dl|webdl', label: 'WEB-DL', priority: 9 },
-    ],
-    addonConfigs: [],
-    settings: {
-      mergeStreams: false,
-    },
-  };
 }
 
 module.exports = router;
