@@ -2,163 +2,141 @@
 
 /**
  * formatterEngine.js
- * Arricchisce lo stream con dati strutturati per il templateEngine.
+ * Arricchisce ogni stream upstream con dati strutturati pronti per il templateEngine.
+ *
+ * Fix rispetto alla versione precedente:
+ *  - Flag emoji estratte dal title (🇮🇹 🇬🇧) OLTRE ai codici ISO
+ *  - filename preso da behaviorHints.filename (priorità) o prima riga del title
+ *  - seeders estratti da "👥 N" o "N seeds" nel title
+ *  - audioChannels = stringa canali ("5.1"), audio = tag testuale ("Atmos")
+ *  - serviceName estratto anche da "⚡ ServiceName" nel title
  */
 
 function formatStreams(streams, config, addonId) {
-    if (!Array.isArray(streams)) return [];
-
-    return streams.map(stream => {
-        const s = { ...stream };
-        const title = s.title || s.name || '';
-
-        const yearMatch = title.match(/\b(19|20)\d{2}\b/);
-        s.year = yearMatch ? parseInt(yearMatch[0]) : null;
-
-        const seasonMatch = title.match(/S(\d{1,2})/i);
-        const episodeMatch = title.match(/E(\d{1,2})/i);
-
-        s.season = seasonMatch ? parseInt(seasonMatch[1]) : -1;
-        s.episode = episodeMatch ? parseInt(episodeMatch[1]) : -1;
-
-        const qualityMatch = title.match(/4K|2160p|1440p|1080p|720p|480p/i);
-
-        s.quality = qualityMatch ? qualityMatch[0] : null;
-        s.resolution = s.quality;
-
-        const encodeMatch = title.match(/(x265|HEVC|H265|x264|AV1)/i);
-
-        s.encode = encodeMatch
-            ? encodeMatch[0].toUpperCase()
-            : null;
-
-        const sizeMatch = title.match(/([\d.]+)\s*(GB|MB|KB)/i);
-
-        if (sizeMatch) {
-            const size = parseFloat(sizeMatch[1]);
-            const unit = sizeMatch[2].toUpperCase();
-
-            s.size = Math.round(
-                size *
-                (
-                    unit === 'GB'
-                        ? 1e9
-                        : unit === 'MB'
-                            ? 1e6
-                            : 1e3
-                )
-            );
-        } else {
-            s.size = 0;
-        }
-
-        s.languages = extractLanguages(title);
-
-        s.languageEmojis = s.languages.map(lang => {
-            switch (lang) {
-                case 'ITA':
-                    return '🇮🇹';
-                case 'ENG':
-                    return '🇬🇧';
-                default:
-                    return lang;
-            }
-        });
-
-        s.audio = extractAudio(title);
-        s.audioChannels = s.audio;
-        s.audioTags = extractAudioTags(title);
-        s.visualTags = extractVisualTags(title);
-
-        s.serviceName =
-            stream.serviceName ||
-            stream.service ||
-            'Real-Debrid';
-
-        s.regexMatched = extractRegexMatched(title);
-
-        return s;
-    });
+  if (!Array.isArray(streams)) return [];
+  return streams.map(stream => enrichStream(stream));
 }
 
-function extractLanguages(title) {
-    const langs = [];
+function enrichStream(stream) {
+  const s     = { ...stream };
+  const title = s.title || '';
+  const name  = s.name  || '';
 
-    const hasITA = /ita|italian/i.test(title);
-    const hasENG = /eng|english/i.test(title);
-    const hasMULTI = /multi|multilang/i.test(title);
+  // ── Anno ────────────────────────────────────────────────────────────────
+  s.year = parseInt((title.match(/\b(19|20)\d{2}\b/) || [])[0]) || null;
 
-    if (hasITA || hasMULTI) langs.push('ITA');
-    if (hasENG || hasMULTI) langs.push('ENG');
+  // ── Stagione / episodio ─────────────────────────────────────────────────
+  s.season  = parseInt((title.match(/[Ss](\d{1,2})/) || [])[1]) || -1;
+  s.episode = parseInt((title.match(/[Ee](\d{1,2})/) || [])[1]) || -1;
 
-    if (!langs.length) {
-        if (/\[ita\]/i.test(title)) langs.push('ITA');
-        if (/\[eng\]/i.test(title)) langs.push('ENG');
-    }
+  // ── Qualità video ────────────────────────────────────────────────────────
+  s.quality    = (title.match(/4K|2160p|1440p|1080p|720p|480p/i) || [])[0] || null;
+  s.resolution = s.quality;
 
-    return langs;
-}
+  // ── Codec ────────────────────────────────────────────────────────────────
+  const encM = title.match(/\b(x265|HEVC|H\.?265|x264|H\.?264|AV1|XviD)\b/i);
+  s.encode   = encM ? encM[0].toUpperCase().replace('H.265','HEVC').replace('H265','HEVC').replace('H.264','H264') : null;
 
-function extractAudio(title) {
-    if (/dolby.*atmos/i.test(title)) return 'Atmos';
-    if (/atmos/i.test(title)) return 'Atmos';
-    if (/dtshd|dts-hd/i.test(title)) return 'DTS-HD';
-    if (/dts/i.test(title)) return 'DTS';
-    if (/7\.1/i.test(title)) return '7.1';
-    if (/5\.1/i.test(title)) return '5.1';
-    if (/truehd/i.test(title)) return 'TrueHD';
+  // ── HDR / Visual tags ────────────────────────────────────────────────────
+  s.visualTags = [];
+  if (/HDR10\+|HDR10Plus/i.test(title))  s.visualTags.push('HDR10+');
+  else if (/HDR10/i.test(title))         s.visualTags.push('HDR10');
+  else if (/HDR/i.test(title))           s.visualTags.push('HDR');
+  if (/Dolby.?Vision|\bDV\b/i.test(title)) s.visualTags.push('DV');
+  if (/HLG/i.test(title))               s.visualTags.push('HLG');
+  if (/\bREMUX\b/i.test(title))         s.visualTags.push('Remux');
+  if (/BluRay|Blu-Ray|BDRip/i.test(title)) s.visualTags.push('BluRay');
+  else if (/WEB-DL|WEBDL/i.test(title)) s.visualTags.push('WEB-DL');
+  else if (/WEBRip/i.test(title))       s.visualTags.push('WEBRip');
 
-    return 'Stereo';
-}
+  s.hdr = s.visualTags.find(t => /HDR|DV/i.test(t)) || null;
 
-function extractAudioTags(title) {
-    const tags = [];
+  // ── Audio ────────────────────────────────────────────────────────────────
+  // audio = descrizione principale; audioChannels = numero canali; audioTags = lista
+  if      (/Dolby.?Atmos|Atmos/i.test(title)) s.audio = 'Atmos';
+  else if (/TrueHD/i.test(title))             s.audio = 'TrueHD';
+  else if (/DTS.?HD|DTS-HD/i.test(title))     s.audio = 'DTS-HD';
+  else if (/\bDTS\b/i.test(title))            s.audio = 'DTS';
+  else if (/EAC3|E-AC-3/i.test(title))        s.audio = 'EAC3';
+  else if (/\bAAC\b/i.test(title))            s.audio = 'AAC';
+  else if (/\bAC3\b|DD5/i.test(title))        s.audio = 'DD';
+  else if (/\bFLAC\b/i.test(title))           s.audio = 'FLAC';
+  else                                         s.audio = null;
 
-    if (/dts/i.test(title)) tags.push('DTS');
-    if (/atmos/i.test(title)) tags.push('Atmos');
-    if (/5\.1/i.test(title)) tags.push('5.1');
-    if (/7\.1/i.test(title)) tags.push('7.1');
-    if (/truehd/i.test(title)) tags.push('TrueHD');
+  const chanM   = title.match(/\b(7\.1|5\.1|2\.1|2\.0|1\.0)\b/);
+  s.audioChannels = chanM ? chanM[1] : null;
 
-    return tags;
-}
+  s.audioTags = [];
+  if (s.audio)        s.audioTags.push(s.audio);
+  if (s.audioChannels && s.audioChannels !== s.audio) s.audioTags.push(s.audioChannels);
 
-function extractVisualTags(title) {
-    const tags = [];
+  // ── Dimensioni file ──────────────────────────────────────────────────────
+  const sizeM = title.match(/([\d.]+)\s*(GB|MB|KB)/i);
+  s.size = sizeM ? Math.round(parseFloat(sizeM[1]) * ({ GB: 1e9, MB: 1e6, KB: 1e3 }[sizeM[2].toUpperCase()])) : 0;
 
-    if (/hdr10\+|hdr10plus/i.test(title)) tags.push('HDR10+');
-    if (/hdr10/i.test(title)) tags.push('HDR10');
-    if (/hdr/i.test(title) && !tags.length) tags.push('HDR');
-    if (/dv|dolby vision/i.test(title)) tags.push('DV');
-    if (/hlg/i.test(title)) tags.push('HLG');
+  // ── Seeders ──────────────────────────────────────────────────────────────
+  const seedM = title.match(/👥\s*(\d+)|(\d+)\s*seed/i);
+  s.seeders   = seedM ? parseInt(seedM[1] || seedM[2]) : null;
 
-    return tags;
+  // ── Lingue — priorità: flag emoji > codici ISO nel title ─────────────────
+  const flagM = [...(title.matchAll(/[\u{1F1E0}-\u{1F1FF}]{2}/gu))].map(m => m[0]);
+  const FLAG_MAP = {
+    '🇮🇹': 'ITA', '🇬🇧': 'ENG', '🇫🇷': 'FRE', '🇩🇪': 'GER',
+    '🇪🇸': 'SPA', '🇵🇹': 'POR', '🇷🇺': 'RUS', '🇯🇵': 'JPN',
+    '🇰🇷': 'KOR', '🇨🇳': 'CHI', '🇸🇦': 'ARA',
+  };
+
+  s.languageEmojis = [...new Set(flagM)];
+  s.languages      = [...new Set(
+    flagM.map(f => FLAG_MAP[f]).filter(Boolean)
+    .concat(
+      /\b(ita|italian)\b/i.test(title)   ? ['ITA'] : [],
+      /\b(eng|english)\b/i.test(title)   ? ['ENG'] : [],
+      /\b(multi|multilang)\b/i.test(title) ? ['ITA','ENG'] : [],
+    )
+  )];
+
+  // Se non abbiamo emoji ma abbiamo codici, aggiungiamo emoji
+  if (!s.languageEmojis.length && s.languages.length) {
+    const ISO_FLAG = { ITA:'🇮🇹', ENG:'🇬🇧', FRE:'🇫🇷', GER:'🇩🇪', SPA:'🇪🇸', POR:'🇵🇹', RUS:'🇷🇺' };
+    s.languageEmojis = s.languages.map(l => ISO_FLAG[l]).filter(Boolean);
+  }
+
+  // ── Filename ─────────────────────────────────────────────────────────────
+  // Priorità: behaviorHints.filename > prima riga del title (solo il nome file, no path)
+  const rawFilename = s.behaviorHints?.filename || s.title?.split('\n')[0]?.trim() || null;
+  s.filename = rawFilename ? rawFilename.replace(/^.*[\\/]/, '') : null;
+
+  // ── Service name — da "⚡ Name" nel title o da stream.name bracket ────────
+  const lightningM = title.match(/⚡\s*([^\n\[⚡]+?)(?:\n|$)/);
+  const bracketM   = name.match(/\[([^\]]+)\]/);
+  if (!s.serviceName && !s.service) {
+    s.serviceName = (lightningM?.[1] || bracketM?.[1] || '').trim() || null;
+  }
+
+  // ── Regex badge ──────────────────────────────────────────────────────────
+  s.regexMatched = extractRegexMatched(title);
+
+  return s;
 }
 
 function extractRegexMatched(title) {
-    const patterns = {
-        'Remux T1': /remux.*t1|remux.*tier1|remux.*tier\s*1/i,
-        'Remux T2': /remux.*t2|remux.*tier2|remux.*tier\s*2/i,
-        'Remux T3': /remux.*t3|remux.*tier3|remux.*tier\s*3/i,
-
-        'Bluray T1': /bluray.*t1|bluray.*tier1|bdremux|bluray\s*t1/i,
-        'Bluray T2': /bluray.*t2|bluray.*tier2|bluray\s*t2/i,
-        'Bluray T3': /bluray.*t3|bluray.*tier3|bluray\s*t3/i,
-
-        'Web T1': /web.*t1|web.*tier1|webdl.*t1|web\s*t1/i,
-        'Web T2': /web.*t2|web.*tier2|webdl.*t2|web\s*t2/i,
-        'Web T3': /web.*t3|web.*tier3|webdl.*t3|web\s*t3/i,
-
-        'Web Scene': /web.*scene|scene.*web|webscene/i
-    };
-
-    for (const [key, pattern] of Object.entries(patterns)) {
-        if (pattern.test(title)) {
-            return key;
-        }
-    }
-
-    return null;
+  const patterns = {
+    'Remux T1':  /remux.*t1|remux.*tier1|remux.*tier\s*1/i,
+    'Remux T2':  /remux.*t2|remux.*tier2|remux.*tier\s*2/i,
+    'Remux T3':  /remux.*t3|remux.*tier3|remux.*tier\s*3/i,
+    'Bluray T1': /bluray.*t1|bluray.*tier1|bdremux|bluray\s*t1/i,
+    'Bluray T2': /bluray.*t2|bluray.*tier2|bluray\s*t2/i,
+    'Bluray T3': /bluray.*t3|bluray.*tier3|bluray\s*t3/i,
+    'Web T1':    /web.*t1|web.*tier1|webdl.*t1|web\s*t1/i,
+    'Web T2':    /web.*t2|web.*tier2|webdl.*t2|web\s*t2/i,
+    'Web T3':    /web.*t3|web.*tier3|webdl.*t3|web\s*t3/i,
+    'Web Scene': /web.*scene|scene.*web|webscene/i,
+  };
+  for (const [key, pat] of Object.entries(patterns)) {
+    if (pat.test(title)) return key;
+  }
+  return null;
 }
 
 module.exports = { formatStreams };
