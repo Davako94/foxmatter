@@ -40,7 +40,20 @@ router.get('/', asyncHandler(async (req, res) => {
   const configuredIds = new Set((config?.addonConfigs || []).map(a => a.addonId));
 
   // FILTRO DI ESCLUSIONE: Escludiamo Cinemeta, cataloghi o sottotitoli puri. Passano solo gli addon video reali.
-  const filteredAddons = result.addons.filter(addon => addon && addon.isProxiable);
+  const sourceAddons = result.addons.length
+    ? result.addons
+    : (config?.addonConfigs || []).map(a => ({
+        id: a.addonId || a.slug,
+        slug: a.slug,
+        name: a.name,
+        transportUrl: a.transportUrl,
+        idPrefixes: a.idPrefixes || [],
+        types: a.types || [],
+        logo: a.logo || null,
+        isProxiable: true,
+      }));
+
+  const filteredAddons = sourceAddons.filter(addon => addon && addon.isProxiable);
 
   const annotated = filteredAddons.map(addon => {
     return {
@@ -76,7 +89,18 @@ router.post('/sync', asyncHandler(async (req, res) => {
   const existingIds = new Set(currentConfig.addonConfigs.map(a => a.addonId));
   
   // Applichiamo il medesimo filtro stringente basato su isProxiable per non inserire spazzatura nel DB
-  const newAddons = result.addons
+  const sourceAddons = result.addons.length ? result.addons : (currentConfig.addonConfigs || []).map(a => ({
+    id: a.addonId || a.slug,
+    slug: a.slug,
+    name: a.name,
+    transportUrl: a.transportUrl,
+    idPrefixes: a.idPrefixes || [],
+    types: a.types || [],
+    logo: a.logo || null,
+    isProxiable: true,
+  }));
+
+  const newAddons = sourceAddons
     .filter(a => !existingIds.has(a.id) && a.isProxiable)
     .map(addon => ({
       addonId:             addon.id,
@@ -101,7 +125,7 @@ router.post('/sync', asyncHandler(async (req, res) => {
   await saveUserConfig(req.user.userId, updatedConfig);
 
   // Filtriamo anche il payload di ritorno per consistenza della UI
-  const filteredResultAddons = result.addons.filter(a => a && a.isProxiable);
+  const filteredResultAddons = sourceAddons.filter(a => a && a.isProxiable);
 
   res.json({
     success: true,
