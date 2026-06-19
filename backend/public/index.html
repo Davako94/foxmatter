@@ -18,23 +18,19 @@
 }
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:36px 16px 80px}
 
-/* ── Brand ── */
 .brand{font-family:'Courier New',monospace;font-size:1.9rem;font-weight:900;letter-spacing:6px;color:var(--green);text-shadow:0 0 8px rgba(0,255,136,.6),0 0 24px rgba(0,255,136,.2);margin-bottom:3px}
 .tagline{color:var(--muted);font-size:.78rem;margin-bottom:32px}
 
-/* ── Panels ── */
 .panel{width:100%;max-width:620px;background:var(--s1);border:1px solid var(--border);border-radius:var(--r);padding:26px}
 .panel+.panel{margin-top:14px}
 #config-panel{display:none}
 
-/* ── Provider tabs ── */
 .tabs{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:22px}
 .tab{padding:10px;border-radius:var(--r2);border:1.5px solid var(--border);background:var(--s2);cursor:pointer;font-size:.8rem;font-weight:700;color:var(--muted);display:flex;align-items:center;justify-content:center;gap:6px;transition:all .15s;user-select:none}
 .tab img{width:14px;height:14px;object-fit:contain}
 [data-prov="stremio"] #tab-stremio{border-color:var(--stremio);color:var(--stremio);background:var(--sg)}
 [data-prov="nuvio"]   #tab-nuvio  {border-color:var(--nuvio);color:var(--nuvio);background:var(--ng)}
 
-/* ── Form ── */
 label.lbl{display:block;font-size:.68rem;color:var(--muted);margin:11px 0 4px;text-transform:uppercase;letter-spacing:.6px}
 input[type=email],input[type=password]{width:100%;padding:9px 12px;background:var(--s2);border:1.5px solid var(--border);border-radius:var(--r2);color:var(--text);font-size:.88rem;outline:none;transition:border-color .15s}
 [data-prov="stremio"] input:focus{border-color:var(--stremio)}
@@ -42,7 +38,6 @@ input[type=email],input[type=password]{width:100%;padding:9px 12px;background:va
 .hint-box{font-size:.74rem;color:var(--muted);padding:8px 12px;background:var(--s2);border-radius:var(--r2);border-left:3px solid var(--border);line-height:1.55;margin-top:12px}
 .error-box{font-size:.76rem;color:var(--red);padding:7px 11px;background:rgba(240,68,68,.08);border-radius:var(--r2);border-left:3px solid var(--red);margin-top:11px;display:none}
 
-/* ── Buttons ── */
 .btn{padding:9px 16px;border:none;border-radius:var(--r2);font-size:.82rem;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:6px;transition:opacity .15s;text-decoration:none}
 .btn-full{width:100%;margin-top:16px}
 .btn-full:first-of-type{margin-top:18px}
@@ -53,23 +48,19 @@ input[type=email],input[type=password]{width:100%;padding:9px 12px;background:va
 [data-prov="stremio"] .btn-prov{background:var(--stremio);color:#fff}
 [data-prov="nuvio"]   .btn-prov{background:var(--nuvio);color:#000}
 
-/* ── Status bar ── */
 .status-bar{display:flex;align-items:center;gap:8px;font-size:.78rem;margin-bottom:18px}
 .dot{width:7px;height:7px;border-radius:50%;background:var(--green);flex-shrink:0;box-shadow:0 0 6px var(--green)}
 .status-ok{color:var(--green);font-weight:700}
 
-/* ── Section headers ── */
 .section-hdr{font-size:.7rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin:22px 0 10px;display:flex;align-items:center;gap:8px}
 .section-hdr::after{content:'';flex:1;height:1px;background:var(--border)}
 hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
 
-/* ── Global template box ── */
 .global-box{background:var(--s2);border:1.5px solid var(--stremio);border-radius:var(--r);padding:16px;margin-bottom:6px;position:relative}
 .global-box::before{content:'GLOBAL';position:absolute;top:-9px;left:12px;font-size:.6rem;font-weight:800;color:var(--stremio);background:var(--s1);padding:0 6px;letter-spacing:1px}
 .global-badge{display:inline-flex;align-items:center;gap:5px;font-size:.7rem;color:var(--stremio);background:var(--sg);border:1px solid var(--stremio);border-radius:20px;padding:2px 9px;margin-bottom:10px}
 .global-note{font-size:.72rem;color:var(--muted);margin-top:8px;line-height:1.5}
 
-/* ── Addon cards ── */
 .addon-card{background:var(--s2);border:1px solid var(--border);border-radius:var(--r);margin-bottom:10px;overflow:hidden;transition:border-color .15s}
 .addon-card:hover{border-color:var(--border2)}
 .addon-card.open{border-color:var(--green)}
@@ -83,7 +74,6 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
 .addon-body{padding:14px 15px 15px;border-top:1px solid var(--border);display:none}
 .addon-card.open .addon-body{display:block}
 
-/* ── Toggle ── */
 .toggle-row{display:flex;align-items:center;gap:7px;margin-bottom:12px}
 .track{width:32px;height:17px;border-radius:9px;background:var(--border);position:relative;cursor:pointer;transition:background .15s;flex-shrink:0}
 .track.on{background:var(--green)}
@@ -91,21 +81,18 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
 .track.on .thumb{left:17px}
 .toggle-lbl{font-size:.73rem;color:var(--muted)}
 
-/* ── Template grid ── */
 .tmpl-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
 .tmpl-col-label{font-size:.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;display:flex;align-items:center;gap:5px}
 .tmpl-col-label span{color:var(--dim);font-size:.6rem}
 textarea.tmpl{width:100%;padding:7px 9px;min-height:68px;background:var(--s3);border:1.5px solid var(--border);border-radius:var(--r3);color:var(--text);font-family:'Courier New',monospace;font-size:.74rem;resize:vertical;outline:none;transition:border-color .15s;line-height:1.5}
 textarea.tmpl:focus{border-color:var(--green)}
 
-/* ── Snippets ── */
 .snip-section{margin-top:7px}
 .snip-label{font-size:.62rem;color:var(--dim);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
 .snip-row{display:flex;flex-wrap:wrap;gap:4px}
 .snip{padding:2px 7px;background:var(--s3);border:1px solid var(--border);border-radius:3px;font-family:monospace;font-size:.67rem;color:var(--muted);cursor:pointer;transition:all .12s;white-space:nowrap}
 .snip:hover{border-color:var(--green);color:var(--green);background:var(--glow)}
 
-/* ── Variables reference ── */
 .vars-toggle{display:flex;align-items:center;gap:5px;font-size:.71rem;color:var(--muted);cursor:pointer;margin-top:10px;user-select:none}
 .vars-toggle:hover{color:var(--text)}
 .vars-panel{margin-top:7px;padding:10px;background:var(--s3);border:1px solid var(--border);border-radius:var(--r2);display:none}
@@ -115,7 +102,6 @@ textarea.tmpl:focus{border-color:var(--green)}
 .var-k{font-family:monospace;color:var(--green)}
 .var-v{color:var(--dim)}
 
-/* ── Preview ── */
 .preview-section{margin-top:12px}
 .preview-lbl{font-size:.63rem;color:var(--dim);text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px;display:flex;align-items:center;gap:6px}
 .preview-lbl::after{content:'';flex:1;height:1px;background:var(--border)}
@@ -123,26 +109,22 @@ textarea.tmpl:focus{border-color:var(--green)}
 .prev-name{font-size:.83rem;font-weight:700;color:#fff;margin-bottom:2px;min-height:1.1em;white-space:pre-wrap}
 .prev-desc{font-size:.73rem;color:#999;line-height:1.5;white-space:pre-wrap;min-height:1.1em}
 
-/* ── JSON upload ── */
 .upload-row{display:flex;align-items:center;gap:7px;margin-top:9px}
 .file-input{display:none}
 .upload-lbl{padding:4px 10px;background:var(--s3);border:1px dashed var(--border);border-radius:var(--r3);font-size:.7rem;cursor:pointer;color:var(--muted);transition:all .12s;white-space:nowrap}
 .upload-lbl:hover{border-color:var(--green);color:var(--green)}
 .upload-status{font-size:.7rem;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
-/* ── URL + install ── */
 .url-row{display:flex;align-items:center;gap:7px;background:var(--s2);border:1px solid var(--border);border-radius:var(--r2);padding:8px 11px;margin-top:12px}
 .url-row code{flex:1;font-size:.65rem;color:var(--muted);word-break:break-all}
 .copy-btn{padding:3px 10px;background:var(--s3);border:1px solid var(--border);border-radius:4px;color:var(--muted);font-size:.68rem;cursor:pointer;white-space:nowrap}
 .copy-btn:hover{color:var(--text)}
 
-/* ── Toast ── */
 .toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(70px);padding:9px 16px;border-radius:var(--r2);font-size:.8rem;font-weight:600;transition:transform .25s ease;z-index:999;pointer-events:none}
 .toast.show{transform:translateX(-50%) translateY(0)}
 .toast.ok{background:var(--green);color:#000}
 .toast.err{background:var(--red);color:#fff}
 
-/* ── Spinner ── */
 .sp{width:12px;height:12px;border-radius:50%;border:2px solid rgba(0,0,0,.15);border-top-color:currentColor;animation:spin .5s linear infinite;display:inline-block}
 @keyframes spin{to{transform:rotate(360deg)}}
 .footer{color:var(--dim);font-size:.67rem;margin-top:26px;text-align:center}
@@ -228,17 +210,21 @@ textarea.tmpl:focus{border-color:var(--green)}
 
 <script>
 // ═══════════════════════════════════════════════════════════════════════════
-// TEMPLATE ENGINE (mirror di services/templateEngine.js)
+// TEMPLATE ENGINE COMPLETO - Supporta TUTTE le funzionalità AIOStreams
 // ═══════════════════════════════════════════════════════════════════════════
-const FAILED = Symbol('F');
 
 function parseTemplate(template, ctx) {
   if (!template || typeof template !== 'string') return '';
+  
   return template.replace(/\{([^{}]+)\}/g, (_, expr) => {
+    // Gestione OR
     if (expr.includes('::or::')) {
-      for (const part of expr.split('::or::')) {
+      const parts = expr.split('::or::');
+      for (const part of parts) {
         const r = evalExpr(part.trim(), ctx);
-        if (r !== '' && r != null) return String(r);
+        if (r !== '' && r != null && r !== false) {
+          return String(r);
+        }
       }
       return '';
     }
@@ -249,73 +235,234 @@ function parseTemplate(template, ctx) {
 
 function evalExpr(expr, ctx) {
   const parts = expr.split('::');
-  const raw   = getPath(ctx, parts[0].trim());
+  const path = parts[0].trim();
+  let val = getPath(ctx, path);
+  
+  // Se è una proprietà semplice (es. {stream.quality})
   if (parts.length === 1) {
-    return Array.isArray(raw) ? raw.join(' ') : (raw != null ? String(raw) : '');
+    return val != null ? String(val) : '';
   }
-  const mods = parts.slice(1).join('::');
-  const om   = mods.match(/\["([\s\S]*?)"\s*\|\|\s*"([\s\S]*?)"\]\s*$/);
-  let tv, fv, cs;
-  if (om) {
-    tv = om[1]; fv = om[2];
-    cs = mods.slice(0, mods.lastIndexOf(om[0])).replace(/::$/, '').trim();
-  } else {
-    cs = mods;
-    tv = Array.isArray(raw) ? raw.join(' ') : (raw != null ? String(raw) : '');
-    fv = '';
+  
+  // Pipeline di modificatori
+  for (let i = 1; i < parts.length; i++) {
+    const mod = parts[i].trim();
+    
+    // ── CONDIZIONALI ──
+    // Formato: exists["vero"||"falso"] o ~HDR["..."||""]
+    const condMatch = mod.match(/^(exists|~|>|<|=|>=|<=)(?:([^[]*))?\["(.*?)"(?:\s*\|\|\s*"(.*?)")?\]$/);
+    if (condMatch) {
+      const type = condMatch[1];
+      const condVal = (condMatch[2] || '').trim();
+      const trueVal = condMatch[3] || '';
+      const falseVal = condMatch[4] || '';
+      
+      let met = false;
+      const strVal = String(val ?? '');
+      const numVal = parseFloat(val);
+      
+      switch(type) {
+        case 'exists':
+          met = (val !== undefined && val !== null && val !== '' && val !== false);
+          break;
+        case '~':
+          met = strVal.toLowerCase().includes(condVal.toLowerCase());
+          break;
+        case '>':
+          met = !isNaN(numVal) && numVal > parseFloat(condVal);
+          break;
+        case '<':
+          met = !isNaN(numVal) && numVal < parseFloat(condVal);
+          break;
+        case '>=':
+          met = !isNaN(numVal) && numVal >= parseFloat(condVal);
+          break;
+        case '<=':
+          met = !isNaN(numVal) && numVal <= parseFloat(condVal);
+          break;
+        case '=':
+          met = strVal === condVal;
+          break;
+      }
+      
+      if (met) {
+        // Se il trueVal contiene altre espressioni, risolvi ricorsivamente
+        if (trueVal.includes('{')) {
+          return parseTemplate(trueVal, ctx);
+        }
+        return trueVal;
+      }
+      if (falseVal !== '') {
+        if (falseVal.includes('{')) {
+          return parseTemplate(falseVal, ctx);
+        }
+        return falseVal;
+      }
+      return '';
+    }
+    
+    // ── TRASFORMAZIONI ──
+    
+    // bytes: formatta dimensione
+    if (mod === 'bytes') {
+      const b = parseFloat(val);
+      if (!b || isNaN(b) || b === 0) return '';
+      if (b >= 1e9) return (b/1e9).toFixed(1) + ' GB';
+      if (b >= 1e6) return Math.round(b/1e6) + ' MB';
+      if (b >= 1e3) return Math.round(b/1e3) + ' KB';
+      return b + ' B';
+    }
+    
+    // join: unisce array con separatore
+    if (mod === 'join') {
+      if (Array.isArray(val)) {
+        val = val.join(' ');
+      }
+      continue;
+    }
+    
+    if (mod.startsWith('join(')) {
+      const m = mod.match(/join\(['"](.*?)['"]\)/);
+      if (m && Array.isArray(val)) {
+        val = val.join(m[1]);
+      }
+      continue;
+    }
+    
+    // replace: sostituisce testo
+    if (mod.startsWith('replace(')) {
+      const m = mod.match(/replace\(['"](.*?)['"],\s*['"](.*?)['"]\)/);
+      if (m) {
+        val = String(val ?? '').split(m[1]).join(m[2]);
+      }
+      continue;
+    }
+    
+    // title: uppercase
+    if (mod === 'title') {
+      val = String(val ?? '').toUpperCase();
+      continue;
+    }
+    
+    // upper: uppercase
+    if (mod === 'upper') {
+      val = String(val ?? '').toUpperCase();
+      continue;
+    }
+    
+    // lower: lowercase
+    if (mod === 'lower') {
+      val = String(val ?? '').toLowerCase();
+      continue;
+    }
+    
+    // length: lunghezza
+    if (mod === 'length') {
+      if (Array.isArray(val)) {
+        val = val.length;
+      } else {
+        val = String(val ?? '').length;
+      }
+      continue;
+    }
+    
+    // first: primo elemento
+    if (mod === 'first') {
+      if (Array.isArray(val)) {
+        val = val[0] ?? '';
+      } else {
+        val = String(val ?? '')[0] ?? '';
+      }
+      continue;
+    }
+    
+    // last: ultimo elemento
+    if (mod === 'last') {
+      if (Array.isArray(val)) {
+        val = val[val.length - 1] ?? '';
+      } else {
+        const str = String(val ?? '');
+        val = str[str.length - 1] ?? '';
+      }
+      continue;
+    }
+    
+    // truncate: tronca
+    if (mod.startsWith('truncate(')) {
+      const m = mod.match(/truncate\((\d+)\)/);
+      if (m) {
+        const n = parseInt(m[1]);
+        const str = String(val ?? '');
+        val = str.length > n ? str.slice(0, n) + '…' : str;
+      }
+      continue;
+    }
+    
+    // reverse: inverte
+    if (mod === 'reverse') {
+      if (Array.isArray(val)) {
+        val = [...val].reverse();
+      } else {
+        val = String(val ?? '').split('').reverse().join('');
+      }
+      continue;
+    }
+    
+    // sort: ordina
+    if (mod === 'sort') {
+      if (Array.isArray(val)) {
+        val = [...val].sort();
+      } else {
+        val = String(val ?? '').split('').sort().join('');
+      }
+      continue;
+    }
   }
-  if (cs === 'bytes') {
-    const b = parseFloat(raw);
-    if (!b) return '';
-    if (b >= 1e9) return (b/1e9).toFixed(1)+' GB';
-    if (b >= 1e6) return Math.round(b/1e6)+' MB';
-    return b+' B';
-  }
-  if (cs === 'title') return String(raw ?? '').toUpperCase();
-  if (cs === 'join')  return Array.isArray(raw) ? raw.join(' ') : String(raw ?? '');
-
-  let met = false;
-  for (const c of cs.split('::').filter(Boolean)) {
-    const v = raw;
-    if (c === 'exists') met = isTruthy(v);
-    else if (c === 'true'  || c === 'istrue')  met = Boolean(v);
-    else if (c === 'false' || c === 'isfalse') met = !v;
-    else if (c.startsWith('>=')) met = parseFloat(v) >= parseFloat(c.slice(2));
-    else if (c.startsWith('<=')) met = parseFloat(v) <= parseFloat(c.slice(2));
-    else if (c.startsWith('>'))  met = parseFloat(v) >  parseFloat(c.slice(1));
-    else if (c.startsWith('<'))  met = parseFloat(v) <  parseFloat(c.slice(1));
-    else if (c.startsWith('='))  met = String(v??'').toLowerCase() === c.slice(1).toLowerCase();
-    else if (c.startsWith('~'))  met = String(v??'').toLowerCase().includes(c.slice(1).toLowerCase());
-  }
-  return met ? tv : fv;
+  
+  return val != null ? String(val) : '';
 }
 
-function isTruthy(v) {
-  if (v == null || v === false || v === 0 || v === '') return false;
-  if (Array.isArray(v) && v.length === 0) return false;
-  return true;
+function getPath(obj, path) {
+  if (!obj) return undefined;
+  return path.split('.').reduce((o, k) => {
+    if (o && o[k] !== undefined && o[k] !== null) {
+      return o[k];
+    }
+    return undefined;
+  }, obj);
 }
-function getPath(o, p) { return p.split('.').reduce((x,k) => (x!=null && x[k]!==undefined ? x[k] : undefined), o); }
 
 // ═══════════════════════════════════════════════════════════════════════════
 // PREVIEW CONTEXT — rispecchia l'output reale di formatterEngine
 // ═══════════════════════════════════════════════════════════════════════════
 function makeCtx(addonName, serviceName) {
   return {
-    stream:{
-      title:'Movie.Title.2024.1080p.BluRay.HEVC-GROUP\n🇮🇹 🇬🇧 ⚡ Real-Debrid\n💾 12.4 GB 👥 87',
-      name:'[RD⚡] Torrentio',
-      filename:'Movie.Title.2024.1080p.BluRay.HEVC-GROUP.mkv',
-      quality:'1080p', resolution:'1080p', encode:'HEVC', hdr:null,
-      visualTags:['BluRay'],
-      audio:'Atmos', audioChannels:'5.1', audioTags:['Atmos','5.1'],
-      size:12400000000, seeders:87,
-      languages:['ITA','ENG'], languageEmojis:['🇮🇹','🇬🇧'],
-      type:'Debrid', cached:true, library:false, regexMatched:null,
-      year:2024, season:null, episode:null, serviceName:'Real-Debrid',
+    stream: {
+      title: 'Movie.Title.2024.1080p.BluRay.HEVC-GROUP\n🇮🇹 🇬🇧 ⚡ Real-Debrid\n💾 12.4 GB 👥 87',
+      name: '[RD⚡] Torrentio',
+      filename: 'Movie.Title.2024.1080p.BluRay.HEVC-GROUP.mkv',
+      quality: '1080p',
+      resolution: '1080p',
+      encode: 'HEVC',
+      hdr: null,
+      visualTags: ['HDR', 'DV'],
+      audio: 'Atmos',
+      audioChannels: '5.1',
+      audioTags: ['Atmos', '5.1'],
+      size: 12400000000,
+      seeders: 87,
+      languages: ['ITA', 'ENG'],
+      languageEmojis: ['🇮🇹', '🇬🇧'],
+      type: 'Debrid',
+      cached: true,
+      library: false,
+      regexMatched: null,
+      year: 2024,
+      season: -1,
+      episode: -1,
+      serviceName: 'Real-Debrid',
     },
-    service:{name: serviceName || 'Real-Debrid', shortName:'RD'},
-    addon:{name: addonName || 'Torrentio'},
+    service: { name: serviceName || 'Real-Debrid', shortName: 'RD' },
+    addon: { name: addonName || 'Torrentio' },
   };
 }
 
@@ -351,7 +498,7 @@ const VARS = [
   ['{stream.filename}','Nome file'],
   ['{stream.languages}','Lingue (ITA, ENG…)'],
   ['{stream.languageEmojis}','Flag emoji 🇮🇹 🇬🇧'],
-  ['{stream.visualTags}','Visual tags (BluRay…)'],
+  ['{stream.visualTags}','Visual tags (HDR, DV…)'],
   ['{stream.type}','Tipo (Debrid/Torrent/HTTP)'],
   ['{stream.cached}','true se in cache'],
   ['{stream.regexMatched}','Regex badge / null'],
@@ -432,12 +579,10 @@ async function loadConfigScreen(){
   document.getElementById('prov-badge').textContent=`· ${prov==='nuvio'?'Nuvio':'Stremio'}`;
   document.getElementById('config-panel').setAttribute('data-prov',prov);
 
-  // Pre-fill global template if saved
   const gc=config?.globalTemplate||{};
   if(gc.titleTemplate) document.getElementById('global-name').value=gc.titleTemplate;
   if(gc.descriptionTemplate) document.getElementById('global-desc').value=gc.descriptionTemplate;
 
-  // Populate global snippets
   fillSnippets('gsnip-name',SNIP_N,'global-name',()=>updateGlobalPreview());
   fillSnippets('gsnip-desc',SNIP_D,'global-desc',()=>updateGlobalPreview());
   updateGlobalPreview();
@@ -453,7 +598,6 @@ async function loadConfigScreen(){
 // ═══════════════════════════════════════════════════════════════════════════
 function onGlobalChange(){
   updateGlobalPreview();
-  // Propagate to all per-addon previews
   addons.filter(a=>a.isProxiable).forEach(a=>updateAddonPreview(a.id));
 }
 
@@ -465,7 +609,6 @@ function updateGlobalPreview(){
   document.getElementById('g-prev-desc').textContent=parseTemplate(dt,ctx)||'—';
 }
 
-// Restituisce il template effettivo: per-addon se valorizzato, altrimenti global
 function effectiveName(addonId){
   const perAddon=document.getElementById(`name-${addonId}`)?.value||'';
   const global=document.getElementById('global-name').value||'';
@@ -609,7 +752,6 @@ function updateAddonPreview(addonId){
   document.getElementById(`pd-${addonId}`).textContent=parseTemplate(effectiveDesc(addonId),ctx)||'—';
 }
 
-// ── JSON upload con aggiornamento anteprima ───────────────────────────────
 function handleJson(event,addonId){
   const file=event.target.files[0];if(!file)return;
   const reader=new FileReader();
@@ -619,8 +761,6 @@ function handleJson(event,addonId){
       document.getElementById(`file-${addonId}`).setAttribute('data-json',e.target.result);
       document.getElementById(`fst-${addonId}`).textContent='✓ '+file.name;
       document.getElementById(`fst-${addonId}`).style.color='var(--green)';
-
-      // Mostra il numero di badge caricati nell'anteprima
       const badges=Array.isArray(parsed.badges)?parsed.badges:Array.isArray(parsed)?parsed:[];
       if(badges.length){
         const info=document.createElement('div');
@@ -652,7 +792,6 @@ async function saveConfig(){
   const addonConfigs=addons.filter(a=>a.isProxiable).map(addon=>{
     const tog=document.getElementById(`tog-${addon.id}`);
     const enabled=tog?tog.classList.contains('on'):true;
-    // Per-addon template: se vuoto usa il global
     const perName=document.getElementById(`name-${addon.id}`)?.value||null;
     const perDesc=document.getElementById(`desc-${addon.id}`)?.value||null;
     const finalName=perName||globalName;
@@ -666,8 +805,8 @@ async function saveConfig(){
       name:addon.name,transportUrl:addon.transportUrl||'https://localhost',
       enabled,idPrefixes:addon.idPrefixes||[],types:addon.types||['movie','series'],
       logo:addon.logo||null,nameTemplate:null,
-      titleTemplate:finalName,       // → stream.name
-      descriptionTemplate:finalDesc, // → stream.title
+      titleTemplate:finalName,
+      descriptionTemplate:finalDesc,
       badges,
     };
   });
@@ -676,7 +815,6 @@ async function saveConfig(){
     globalBadges:config?.globalBadges||[],
     addonConfigs,
     settings:config?.settings||{mergeStreams:false},
-    // Salviamo anche i template globali grezzi per ripopolare il form al prossimo accesso
     globalTemplate:{titleTemplate:globalName,descriptionTemplate:globalDesc},
   };
 
