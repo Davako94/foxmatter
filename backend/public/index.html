@@ -3,104 +3,149 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Foxmatter — Stream Formatter</title>
+<title>Foxmatter</title>
 <style>
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-:root {
-  --bg:#0c0c0e; --surface:#111113; --surface2:#18181b; --surface3:#1f1f23;
-  --border:#2c2c31; --text:#e4e4e7; --muted:#71717a; --dim:#52525b;
-  --green:#00ff88; --green-dim:rgba(0,255,136,.1);
-  --stremio:#8c49e0; --stremio-g:rgba(140,73,224,.15);
-  --nuvio:#ff6b35; --nuvio-g:rgba(255,107,53,.15);
-  --red:#ef4444; --radius:10px;
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0a0a0c;--s1:#111114;--s2:#17171b;--s3:#1e1e23;--s4:#26262d;
+  --border:#2e2e36;--border2:#3a3a44;
+  --text:#e8e8ec;--muted:#6b6b78;--dim:#44444f;
+  --green:#00ff88;--green2:#00cc6a;--glow:rgba(0,255,136,.15);
+  --stremio:#8c49e0;--sg:rgba(140,73,224,.18);
+  --nuvio:#ff6b35;--ng:rgba(255,107,53,.18);
+  --red:#f04444;--amber:#f59e0b;--blue:#3b82f6;
+  --r:10px;--r2:7px;--r3:5px;
 }
-body { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; display:flex; flex-direction:column; align-items:center; padding:40px 16px 80px; }
-.brand { font-family:'Courier New',monospace; font-size:2rem; font-weight:900; letter-spacing:5px; color:var(--green); text-shadow:0 0 6px rgba(0,255,136,.5),0 0 20px rgba(0,255,136,.2); margin-bottom:4px; }
-.tagline { color:var(--muted); font-size:.82rem; margin-bottom:36px; }
-.panel { width:100%; max-width:560px; background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:28px; }
-.tabs { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:24px; }
-.tab { padding:10px; border-radius:8px; border:1.5px solid var(--border); background:var(--surface2); cursor:pointer; font-size:.82rem; font-weight:700; color:var(--muted); display:flex; align-items:center; justify-content:center; gap:7px; transition:all .15s; user-select:none; }
-.tab img { width:15px; height:15px; object-fit:contain; }
-[data-prov="stremio"] #tab-stremio { border-color:var(--stremio); color:var(--stremio); background:var(--stremio-g); }
-[data-prov="nuvio"]   #tab-nuvio   { border-color:var(--nuvio);   color:var(--nuvio);   background:var(--nuvio-g); }
-label.lbl { display:block; font-size:.72rem; color:var(--muted); margin:12px 0 4px; text-transform:uppercase; letter-spacing:.5px; }
-input[type=email],input[type=password] { width:100%; padding:9px 12px; background:var(--surface2); border:1.5px solid var(--border); border-radius:7px; color:var(--text); font-size:.9rem; outline:none; transition:border-color .15s; }
-[data-prov="stremio"] input:focus { border-color:var(--stremio); }
-[data-prov="nuvio"]   input:focus { border-color:var(--nuvio); }
-.btn-primary { width:100%; margin-top:18px; padding:11px; border:none; border-radius:8px; font-size:.9rem; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; transition:opacity .15s; }
-.btn-primary:disabled { opacity:.4; cursor:not-allowed; }
-[data-prov="stremio"] .btn-primary { background:var(--stremio); color:#fff; }
-[data-prov="nuvio"]   .btn-primary { background:var(--nuvio);   color:#000; }
-.btn-ghost { width:100%; margin-top:12px; padding:9px; background:transparent; border:1px solid var(--border); border-radius:8px; color:var(--muted); font-size:.82rem; cursor:pointer; }
-.btn-ghost:hover { border-color:var(--dim); color:var(--text); }
-.error-box { font-size:.8rem; color:var(--red); padding:8px 12px; background:rgba(239,68,68,.08); border-radius:6px; border-left:3px solid var(--red); margin-top:12px; display:none; }
-.hint-box { font-size:.78rem; color:var(--muted); padding:9px 12px; background:var(--surface2); border-radius:7px; border-left:3px solid var(--border); line-height:1.55; margin-top:14px; }
-#config-panel { display:none; }
-.status-bar { display:flex; align-items:center; gap:8px; font-size:.8rem; margin-bottom:20px; }
-.status-dot { width:8px; height:8px; border-radius:50%; background:var(--green); flex-shrink:0; }
-.status-label { color:var(--green); font-weight:700; }
-.status-sub { color:var(--muted); }
-.addon-card { background:var(--surface2); border:1px solid var(--border); border-radius:9px; margin-bottom:14px; overflow:hidden; }
-.addon-header { display:flex; align-items:center; gap:10px; padding:13px 16px; cursor:pointer; border-bottom:1px solid transparent; transition:background .15s; }
-.addon-header:hover { background:var(--surface3); }
-.addon-logo { width:28px; height:28px; border-radius:5px; object-fit:contain; flex-shrink:0; background:var(--surface3); }
-.addon-logo-fb { width:28px; height:28px; border-radius:5px; flex-shrink:0; background:var(--surface3); display:flex; align-items:center; justify-content:center; font-size:.6rem; color:var(--dim); font-weight:700; }
-.addon-name { font-size:.88rem; font-weight:700; color:var(--green); flex:1; }
-.addon-chevron { color:var(--dim); font-size:.75rem; transition:transform .2s; }
-.addon-card.open .addon-header { border-bottom-color:var(--border); }
-.addon-card.open .addon-chevron { transform:rotate(90deg); }
-.addon-body { padding:16px; display:none; }
-.addon-card.open .addon-body { display:block; }
-.template-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
-.tmpl-label { font-size:.68rem; color:var(--muted); text-transform:uppercase; letter-spacing:.5px; margin-bottom:5px; }
-.tmpl-input { width:100%; padding:8px 10px; min-height:72px; background:var(--surface3); border:1.5px solid var(--border); border-radius:6px; color:var(--text); font-family:'Courier New',monospace; font-size:.78rem; resize:vertical; outline:none; transition:border-color .15s; line-height:1.5; }
-.tmpl-input:focus { border-color:var(--green); }
-.snippets-section { margin-top:10px; }
-.snippets-title { font-size:.67rem; color:var(--dim); margin-bottom:5px; text-transform:uppercase; letter-spacing:.5px; }
-.snippets-row { display:flex; flex-wrap:wrap; gap:5px; }
-.snippet { padding:3px 8px; background:var(--surface3); border:1px solid var(--border); border-radius:4px; font-family:monospace; font-size:.7rem; color:var(--muted); cursor:pointer; transition:all .12s; }
-.snippet:hover { border-color:var(--green); color:var(--green); background:var(--green-dim); }
-.vars-toggle { display:flex; align-items:center; gap:6px; font-size:.75rem; color:var(--muted); cursor:pointer; margin-top:12px; user-select:none; }
-.vars-toggle:hover { color:var(--text); }
-.vars-panel { margin-top:8px; padding:12px; background:var(--surface3); border:1px solid var(--border); border-radius:7px; display:none; }
-.vars-panel.open { display:block; }
-.vars-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(190px,1fr)); gap:4px 10px; }
-.var-item { font-size:.71rem; }
-.var-name { font-family:monospace; color:var(--green); }
-.var-desc { color:var(--dim); }
-.preview-section { margin-top:14px; }
-.preview-label { font-size:.68rem; color:var(--dim); text-transform:uppercase; letter-spacing:.5px; margin-bottom:6px; }
-.preview-box { background:#000; border:1px solid var(--border); border-radius:7px; padding:12px 14px; }
-.preview-name  { font-size:.85rem; font-weight:700; color:#fff; margin-bottom:3px; min-height:1.2em; }
-.preview-title { font-size:.76rem; color:#aaa; line-height:1.5; white-space:pre-wrap; min-height:1.2em; }
-.addon-toggle { display:flex; align-items:center; gap:6px; margin-bottom:12px; }
-.toggle-track { width:34px; height:18px; border-radius:9px; background:var(--border); position:relative; cursor:pointer; transition:background .15s; flex-shrink:0; }
-.toggle-track.on { background:var(--green); }
-.toggle-thumb { position:absolute; top:2px; left:2px; width:14px; height:14px; border-radius:50%; background:#fff; transition:left .15s; }
-.toggle-track.on .toggle-thumb { left:18px; }
-.toggle-lbl { font-size:.76rem; color:var(--muted); }
-.upload-row { display:flex; align-items:center; gap:8px; margin-top:10px; }
-.file-input { display:none; }
-.upload-lbl { padding:5px 11px; background:var(--surface3); border:1px dashed var(--border); border-radius:5px; font-size:.74rem; cursor:pointer; color:var(--muted); transition:all .12s; }
-.upload-lbl:hover { border-color:var(--green); color:var(--green); }
-.upload-status { font-size:.73rem; color:var(--muted); }
-hr.div { border:none; border-top:1px solid var(--border); margin:20px 0; }
-.url-row { display:flex; align-items:center; gap:8px; background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:9px 12px; margin-top:14px; }
-.url-row code { flex:1; font-size:.68rem; color:var(--muted); word-break:break-all; }
-.copy-btn { padding:4px 11px; background:var(--surface3); border:1px solid var(--border); border-radius:5px; color:var(--muted); font-size:.72rem; cursor:pointer; }
-.copy-btn:hover { color:var(--text); }
-.install-btn { width:100%; margin-top:10px; padding:11px; border:none; border-radius:8px; font-size:.9rem; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; text-decoration:none; }
-[data-prov="stremio"] .install-btn { background:var(--stremio); color:#fff; }
-[data-prov="nuvio"]   .install-btn { background:var(--nuvio);   color:#000; }
-.save-btn { width:100%; margin-top:16px; padding:12px; background:var(--green); color:#000; border:none; border-radius:8px; font-size:.92rem; font-weight:800; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; transition:opacity .15s; }
-.save-btn:disabled { opacity:.4; cursor:not-allowed; }
-.spin { width:13px; height:13px; border-radius:50%; border:2px solid rgba(0,0,0,.2); border-top-color:currentColor; animation:sp .55s linear infinite; display:inline-block; }
-@keyframes sp { to { transform:rotate(360deg); } }
-.toast { position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(80px); padding:10px 18px; border-radius:8px; font-size:.84rem; font-weight:600; transition:transform .3s ease; z-index:999; pointer-events:none; }
-.toast.show { transform:translateX(-50%) translateY(0); }
-.toast.success { background:var(--green); color:#000; }
-.toast.error   { background:var(--red);   color:#fff; }
-.footer { color:var(--dim); font-size:.7rem; margin-top:28px; text-align:center; }
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:36px 16px 80px}
+
+/* ── Brand ── */
+.brand{font-family:'Courier New',monospace;font-size:1.9rem;font-weight:900;letter-spacing:6px;color:var(--green);text-shadow:0 0 8px rgba(0,255,136,.6),0 0 24px rgba(0,255,136,.2);margin-bottom:3px}
+.tagline{color:var(--muted);font-size:.78rem;margin-bottom:32px}
+
+/* ── Panels ── */
+.panel{width:100%;max-width:620px;background:var(--s1);border:1px solid var(--border);border-radius:var(--r);padding:26px}
+.panel+.panel{margin-top:14px}
+#config-panel{display:none}
+
+/* ── Provider tabs ── */
+.tabs{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:22px}
+.tab{padding:10px;border-radius:var(--r2);border:1.5px solid var(--border);background:var(--s2);cursor:pointer;font-size:.8rem;font-weight:700;color:var(--muted);display:flex;align-items:center;justify-content:center;gap:6px;transition:all .15s;user-select:none}
+.tab img{width:14px;height:14px;object-fit:contain}
+[data-prov="stremio"] #tab-stremio{border-color:var(--stremio);color:var(--stremio);background:var(--sg)}
+[data-prov="nuvio"]   #tab-nuvio  {border-color:var(--nuvio);color:var(--nuvio);background:var(--ng)}
+
+/* ── Form ── */
+label.lbl{display:block;font-size:.68rem;color:var(--muted);margin:11px 0 4px;text-transform:uppercase;letter-spacing:.6px}
+input[type=email],input[type=password]{width:100%;padding:9px 12px;background:var(--s2);border:1.5px solid var(--border);border-radius:var(--r2);color:var(--text);font-size:.88rem;outline:none;transition:border-color .15s}
+[data-prov="stremio"] input:focus{border-color:var(--stremio)}
+[data-prov="nuvio"]   input:focus{border-color:var(--nuvio)}
+.hint-box{font-size:.74rem;color:var(--muted);padding:8px 12px;background:var(--s2);border-radius:var(--r2);border-left:3px solid var(--border);line-height:1.55;margin-top:12px}
+.error-box{font-size:.76rem;color:var(--red);padding:7px 11px;background:rgba(240,68,68,.08);border-radius:var(--r2);border-left:3px solid var(--red);margin-top:11px;display:none}
+
+/* ── Buttons ── */
+.btn{padding:9px 16px;border:none;border-radius:var(--r2);font-size:.82rem;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:6px;transition:opacity .15s;text-decoration:none}
+.btn-full{width:100%;margin-top:16px}
+.btn-full:first-of-type{margin-top:18px}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn-green{background:var(--green);color:#000}
+.btn-ghost{background:transparent;border:1px solid var(--border);color:var(--muted)}
+.btn-ghost:hover{border-color:var(--border2);color:var(--text)}
+[data-prov="stremio"] .btn-prov{background:var(--stremio);color:#fff}
+[data-prov="nuvio"]   .btn-prov{background:var(--nuvio);color:#000}
+
+/* ── Status bar ── */
+.status-bar{display:flex;align-items:center;gap:8px;font-size:.78rem;margin-bottom:18px}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--green);flex-shrink:0;box-shadow:0 0 6px var(--green)}
+.status-ok{color:var(--green);font-weight:700}
+
+/* ── Section headers ── */
+.section-hdr{font-size:.7rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin:22px 0 10px;display:flex;align-items:center;gap:8px}
+.section-hdr::after{content:'';flex:1;height:1px;background:var(--border)}
+hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
+
+/* ── Global template box ── */
+.global-box{background:var(--s2);border:1.5px solid var(--stremio);border-radius:var(--r);padding:16px;margin-bottom:6px;position:relative}
+.global-box::before{content:'GLOBAL';position:absolute;top:-9px;left:12px;font-size:.6rem;font-weight:800;color:var(--stremio);background:var(--s1);padding:0 6px;letter-spacing:1px}
+.global-badge{display:inline-flex;align-items:center;gap:5px;font-size:.7rem;color:var(--stremio);background:var(--sg);border:1px solid var(--stremio);border-radius:20px;padding:2px 9px;margin-bottom:10px}
+.global-note{font-size:.72rem;color:var(--muted);margin-top:8px;line-height:1.5}
+
+/* ── Addon cards ── */
+.addon-card{background:var(--s2);border:1px solid var(--border);border-radius:var(--r);margin-bottom:10px;overflow:hidden;transition:border-color .15s}
+.addon-card:hover{border-color:var(--border2)}
+.addon-card.open{border-color:var(--green)}
+.addon-header{display:flex;align-items:center;gap:10px;padding:12px 15px;cursor:pointer}
+.addon-logo{width:26px;height:26px;border-radius:5px;object-fit:contain;flex-shrink:0;background:var(--s3)}
+.addon-logo-fb{width:26px;height:26px;border-radius:5px;flex-shrink:0;background:var(--s3);display:flex;align-items:center;justify-content:center;font-size:.58rem;color:var(--dim);font-weight:800;letter-spacing:.5px}
+.addon-title{font-size:.85rem;font-weight:700;color:var(--green);flex:1}
+.addon-meta{font-size:.68rem;color:var(--dim);margin-left:auto;padding-right:8px}
+.chevron{color:var(--dim);font-size:.7rem;transition:transform .2s;flex-shrink:0}
+.addon-card.open .chevron{transform:rotate(90deg)}
+.addon-body{padding:14px 15px 15px;border-top:1px solid var(--border);display:none}
+.addon-card.open .addon-body{display:block}
+
+/* ── Toggle ── */
+.toggle-row{display:flex;align-items:center;gap:7px;margin-bottom:12px}
+.track{width:32px;height:17px;border-radius:9px;background:var(--border);position:relative;cursor:pointer;transition:background .15s;flex-shrink:0}
+.track.on{background:var(--green)}
+.thumb{position:absolute;top:2px;left:2px;width:13px;height:13px;border-radius:50%;background:#fff;transition:left .15s}
+.track.on .thumb{left:17px}
+.toggle-lbl{font-size:.73rem;color:var(--muted)}
+
+/* ── Template grid ── */
+.tmpl-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
+.tmpl-col-label{font-size:.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;display:flex;align-items:center;gap:5px}
+.tmpl-col-label span{color:var(--dim);font-size:.6rem}
+textarea.tmpl{width:100%;padding:7px 9px;min-height:68px;background:var(--s3);border:1.5px solid var(--border);border-radius:var(--r3);color:var(--text);font-family:'Courier New',monospace;font-size:.74rem;resize:vertical;outline:none;transition:border-color .15s;line-height:1.5}
+textarea.tmpl:focus{border-color:var(--green)}
+
+/* ── Snippets ── */
+.snip-section{margin-top:7px}
+.snip-label{font-size:.62rem;color:var(--dim);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
+.snip-row{display:flex;flex-wrap:wrap;gap:4px}
+.snip{padding:2px 7px;background:var(--s3);border:1px solid var(--border);border-radius:3px;font-family:monospace;font-size:.67rem;color:var(--muted);cursor:pointer;transition:all .12s;white-space:nowrap}
+.snip:hover{border-color:var(--green);color:var(--green);background:var(--glow)}
+
+/* ── Variables reference ── */
+.vars-toggle{display:flex;align-items:center;gap:5px;font-size:.71rem;color:var(--muted);cursor:pointer;margin-top:10px;user-select:none}
+.vars-toggle:hover{color:var(--text)}
+.vars-panel{margin-top:7px;padding:10px;background:var(--s3);border:1px solid var(--border);border-radius:var(--r2);display:none}
+.vars-panel.open{display:block}
+.vars-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(175px,1fr));gap:3px 10px}
+.var-row{font-size:.68rem}
+.var-k{font-family:monospace;color:var(--green)}
+.var-v{color:var(--dim)}
+
+/* ── Preview ── */
+.preview-section{margin-top:12px}
+.preview-lbl{font-size:.63rem;color:var(--dim);text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px;display:flex;align-items:center;gap:6px}
+.preview-lbl::after{content:'';flex:1;height:1px;background:var(--border)}
+.preview-box{background:#000;border:1px solid var(--border);border-radius:var(--r2);padding:11px 13px}
+.prev-name{font-size:.83rem;font-weight:700;color:#fff;margin-bottom:2px;min-height:1.1em;white-space:pre-wrap}
+.prev-desc{font-size:.73rem;color:#999;line-height:1.5;white-space:pre-wrap;min-height:1.1em}
+
+/* ── JSON upload ── */
+.upload-row{display:flex;align-items:center;gap:7px;margin-top:9px}
+.file-input{display:none}
+.upload-lbl{padding:4px 10px;background:var(--s3);border:1px dashed var(--border);border-radius:var(--r3);font-size:.7rem;cursor:pointer;color:var(--muted);transition:all .12s;white-space:nowrap}
+.upload-lbl:hover{border-color:var(--green);color:var(--green)}
+.upload-status{font-size:.7rem;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* ── URL + install ── */
+.url-row{display:flex;align-items:center;gap:7px;background:var(--s2);border:1px solid var(--border);border-radius:var(--r2);padding:8px 11px;margin-top:12px}
+.url-row code{flex:1;font-size:.65rem;color:var(--muted);word-break:break-all}
+.copy-btn{padding:3px 10px;background:var(--s3);border:1px solid var(--border);border-radius:4px;color:var(--muted);font-size:.68rem;cursor:pointer;white-space:nowrap}
+.copy-btn:hover{color:var(--text)}
+
+/* ── Toast ── */
+.toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(70px);padding:9px 16px;border-radius:var(--r2);font-size:.8rem;font-weight:600;transition:transform .25s ease;z-index:999;pointer-events:none}
+.toast.show{transform:translateX(-50%) translateY(0)}
+.toast.ok{background:var(--green);color:#000}
+.toast.err{background:var(--red);color:#fff}
+
+/* ── Spinner ── */
+.sp{width:12px;height:12px;border-radius:50%;border:2px solid rgba(0,0,0,.15);border-top-color:currentColor;animation:spin .5s linear infinite;display:inline-block}
+@keyframes spin{to{transform:rotate(360deg)}}
+.footer{color:var(--dim);font-size:.67rem;margin-top:26px;text-align:center}
 </style>
 </head>
 <body>
@@ -108,6 +153,7 @@ hr.div { border:none; border-top:1px solid var(--border); margin:20px 0; }
 <div class="brand">FOXMATTER</div>
 <p class="tagline">Stream formatting & badges · Stremio & Nuvio</p>
 
+<!-- ═══ LOGIN ═══ -->
 <div class="panel" id="login-panel" data-prov="stremio">
   <div class="tabs">
     <button class="tab" id="tab-stremio" onclick="switchProv('stremio')"><img src="stremio.png" onerror="this.style.display='none'" alt=""> STREMIO</button>
@@ -117,412 +163,477 @@ hr.div { border:none; border-top:1px solid var(--border); margin:20px 0; }
   <input type="email" id="email" placeholder="email@example.com" autocomplete="email"/>
   <label class="lbl">Password</label>
   <input type="password" id="password" placeholder="Password" autocomplete="current-password"/>
-  <button class="btn-primary" id="login-btn" onclick="doLogin()">Log in with Stremio</button>
+  <button class="btn btn-full btn-prov" id="login-btn" onclick="doLogin()">Log in with Stremio</button>
   <div class="error-box" id="login-err"></div>
   <div class="hint-box">We store only a session token — never your password.</div>
 </div>
 
+<!-- ═══ CONFIG ═══ -->
 <div class="panel" id="config-panel" data-prov="stremio">
   <div class="status-bar">
-    <div class="status-dot"></div>
-    <span class="status-label">Ready for configuration</span>
-    <span class="status-sub" id="prov-badge"></span>
+    <div class="dot"></div>
+    <span class="status-ok">Ready for configuration</span>
+    <span id="prov-badge" style="color:var(--muted)"></span>
   </div>
-  <p style="font-size:.8rem;color:var(--muted);line-height:1.6;margin-bottom:18px;">
-    Customize name and description templates for each addon.
-    Save, then install the master manifest and
-    <strong style="color:var(--text)">move it to the top of your addon list</strong>.
+  <p style="font-size:.77rem;color:var(--muted);line-height:1.65;margin-bottom:4px">
+    Configure templates for each addon, or set a <strong style="color:var(--text)">global template</strong> applied to all.
+    After saving, install the master manifest and move it <strong style="color:var(--text)">to the top of your addon list</strong>.
   </p>
-  <div id="addon-list"><p style="font-size:.82rem;color:var(--muted)">Loading addons…</p></div>
+
+  <!-- GLOBAL TEMPLATE -->
+  <div class="section-hdr">Global Template</div>
+  <div class="global-box" id="global-box">
+    <div class="global-badge">⚡ Applied to all addons unless overridden</div>
+    <div class="tmpl-grid">
+      <div>
+        <div class="tmpl-col-label">Name template <span>(stream.name)</span></div>
+        <textarea class="tmpl" id="global-name" oninput="onGlobalChange()" placeholder="{stream.quality} | {service.name}"></textarea>
+      </div>
+      <div>
+        <div class="tmpl-col-label">Description template <span>(stream.title)</span></div>
+        <textarea class="tmpl" id="global-desc" oninput="onGlobalChange()" placeholder="{stream.filename}&#10;{stream.languageEmojis} {stream.audio}&#10;💾 {stream.size::bytes}"></textarea>
+      </div>
+    </div>
+    <div class="snip-section">
+      <div class="snip-label">Quick insert — Name</div>
+      <div class="snip-row" id="gsnip-name"></div>
+    </div>
+    <div class="snip-section" style="margin-top:6px">
+      <div class="snip-label">Quick insert — Description</div>
+      <div class="snip-row" id="gsnip-desc"></div>
+    </div>
+    <div class="preview-section" style="margin-top:10px">
+      <div class="preview-lbl">Global Preview</div>
+      <div class="preview-box">
+        <div class="prev-name" id="g-prev-name">—</div>
+        <div class="prev-desc" id="g-prev-desc">—</div>
+      </div>
+    </div>
+    <p class="global-note">Leave both fields empty to use per-addon templates only.</p>
+  </div>
+
+  <!-- PER-ADDON LIST -->
+  <div class="section-hdr">Per-Addon Templates</div>
+  <div id="addon-list"><p style="font-size:.8rem;color:var(--muted)">Loading addons…</p></div>
+
   <hr class="div">
-  <button class="save-btn" id="save-btn" onclick="saveConfig()">⚡ Save & Update</button>
+  <button class="btn btn-full btn-green" id="save-btn" onclick="saveConfig()">⚡ Save & Update</button>
   <div class="url-row"><code id="url-text">—</code><button class="copy-btn" onclick="copyUrl()">Copy</button></div>
-  <a id="install-link" href="#" class="install-btn">📥 Install in Stremio</a>
-  <button class="btn-ghost" onclick="doLogout()">↩ Switch account</button>
+  <a id="install-link" href="#" class="btn btn-full btn-prov" style="margin-top:10px">📥 Install in Stremio</a>
+  <button class="btn btn-full btn-ghost" onclick="doLogout()">↩ Switch account</button>
 </div>
 
-<div class="footer">Foxmatter is open source and self-hostable.</div>
+<div class="footer">Foxmatter · open source · self-hostable</div>
 <div class="toast" id="toast"></div>
 
 <script>
 // ═══════════════════════════════════════════════════════════════════════════
-// TEMPLATE ENGINE — identico a services/templateEngine.js (inline per browser)
+// TEMPLATE ENGINE (mirror di services/templateEngine.js)
 // ═══════════════════════════════════════════════════════════════════════════
+const FAILED = Symbol('F');
+
 function parseTemplate(template, ctx) {
   if (!template || typeof template !== 'string') return '';
-  return template.replace(/\{([^{}]+)\}/g, (match, expression) => {
-    if (expression.includes('::or::')) {
-      const orParts = expression.split('::or::');
-      for (let i = 0; i < orParts.length; i++) {
-        const result = evalExpr(orParts[i].trim(), ctx);
-        if (result !== '' && result !== null && result !== undefined) return String(result);
-        if (i === orParts.length - 1) return String(result ?? '');
+  return template.replace(/\{([^{}]+)\}/g, (_, expr) => {
+    if (expr.includes('::or::')) {
+      for (const part of expr.split('::or::')) {
+        const r = evalExpr(part.trim(), ctx);
+        if (r !== '' && r != null) return String(r);
       }
       return '';
     }
-    const result = evalExpr(expression.trim(), ctx);
-    return result !== null && result !== undefined ? String(result) : '';
+    const r = evalExpr(expr.trim(), ctx);
+    return r != null ? String(r) : '';
   });
 }
 
 function evalExpr(expr, ctx) {
-  const parts    = expr.split('::');
-  const propPath = parts[0].trim();
-  const rawValue = getPath(ctx, propPath);
-
+  const parts = expr.split('::');
+  const raw   = getPath(ctx, parts[0].trim());
   if (parts.length === 1) {
-    if (Array.isArray(rawValue)) return rawValue.join(' ');
-    return rawValue !== undefined && rawValue !== null ? String(rawValue) : '';
+    return Array.isArray(raw) ? raw.join(' ') : (raw != null ? String(raw) : '');
   }
-
-  const modifiers   = parts.slice(1).join('::');
-  const outputMatch = modifiers.match(/\["([\s\S]*?)"\s*\|\|\s*"([\s\S]*?)"\]\s*$/);
-
-  let trueVal, falseVal, condStr;
-  if (outputMatch) {
-    trueVal  = outputMatch[1];
-    falseVal = outputMatch[2];
-    condStr  = modifiers.slice(0, modifiers.lastIndexOf(outputMatch[0])).replace(/::$/, '').trim();
+  const mods = parts.slice(1).join('::');
+  const om   = mods.match(/\["([\s\S]*?)"\s*\|\|\s*"([\s\S]*?)"\]\s*$/);
+  let tv, fv, cs;
+  if (om) {
+    tv = om[1]; fv = om[2];
+    cs = mods.slice(0, mods.lastIndexOf(om[0])).replace(/::$/, '').trim();
   } else {
-    condStr  = modifiers;
-    trueVal  = Array.isArray(rawValue) ? rawValue.join(' ')
-             : (rawValue !== null && rawValue !== undefined ? String(rawValue) : '');
-    falseVal = '';
+    cs = mods;
+    tv = Array.isArray(raw) ? raw.join(' ') : (raw != null ? String(raw) : '');
+    fv = '';
   }
-
-  // Trasformazioni pure
-  if (condStr === 'bytes') {
-    const b = parseFloat(rawValue);
-    if (isNaN(b) || b === 0) return falseVal;
-    if (b >= 1e9) return (b / 1e9).toFixed(1) + ' GB';
-    if (b >= 1e6) return Math.round(b / 1e6) + ' MB';
-    return b + ' B';
+  if (cs === 'bytes') {
+    const b = parseFloat(raw);
+    if (!b) return '';
+    if (b >= 1e9) return (b/1e9).toFixed(1)+' GB';
+    if (b >= 1e6) return Math.round(b/1e6)+' MB';
+    return b+' B';
   }
-  if (condStr === 'title') return String(rawValue ?? '').toUpperCase();
-  if (condStr === 'join')  return Array.isArray(rawValue) ? rawValue.join(' ') : String(rawValue ?? '');
+  if (cs === 'title') return String(raw ?? '').toUpperCase();
+  if (cs === 'join')  return Array.isArray(raw) ? raw.join(' ') : String(raw ?? '');
 
-  // Condizioni
-  let condMet = false;
-  const condParts = condStr.split('::').filter(Boolean);
-
-  if (condParts.length === 0) {
-    const v = rawValue;
-    condMet = v !== undefined && v !== null && v !== '' && v !== 0 && v !== false
-           && !(Array.isArray(v) && v.length === 0);
-  } else {
-    for (const cond of condParts) {
-      const c = cond.trim();
-      const v = rawValue;
-      if (c === 'exists') {
-        condMet = v !== undefined && v !== null && v !== '' && v !== 0 && v !== false
-               && !(Array.isArray(v) && v.length === 0);
-      } else if (c === 'istrue'  || c === 'true')  { condMet = Boolean(v); }
-      else if   (c === 'isfalse' || c === 'false') { condMet = !v; }
-      else if   (c.startsWith('>=')) { condMet = parseFloat(v) >= parseFloat(c.slice(2)); }
-      else if   (c.startsWith('<=')) { condMet = parseFloat(v) <= parseFloat(c.slice(2)); }
-      else if   (c.startsWith('>'))  { condMet = parseFloat(v) >  parseFloat(c.slice(1)); }
-      else if   (c.startsWith('<'))  { condMet = parseFloat(v) <  parseFloat(c.slice(1)); }
-      else if   (c.startsWith('='))  { condMet = String(v ?? '').toLowerCase() === c.slice(1).toLowerCase(); }
-      else if   (c.startsWith('~'))  { condMet = String(v ?? '').toLowerCase().includes(c.slice(1).toLowerCase()); }
-    }
+  let met = false;
+  for (const c of cs.split('::').filter(Boolean)) {
+    const v = raw;
+    if (c === 'exists') met = isTruthy(v);
+    else if (c === 'true'  || c === 'istrue')  met = Boolean(v);
+    else if (c === 'false' || c === 'isfalse') met = !v;
+    else if (c.startsWith('>=')) met = parseFloat(v) >= parseFloat(c.slice(2));
+    else if (c.startsWith('<=')) met = parseFloat(v) <= parseFloat(c.slice(2));
+    else if (c.startsWith('>'))  met = parseFloat(v) >  parseFloat(c.slice(1));
+    else if (c.startsWith('<'))  met = parseFloat(v) <  parseFloat(c.slice(1));
+    else if (c.startsWith('='))  met = String(v??'').toLowerCase() === c.slice(1).toLowerCase();
+    else if (c.startsWith('~'))  met = String(v??'').toLowerCase().includes(c.slice(1).toLowerCase());
   }
-  return condMet ? trueVal : falseVal;
+  return met ? tv : fv;
 }
 
-function getPath(obj, path) {
-  return path.split('.').reduce((o, k) => (o != null && o[k] !== undefined ? o[k] : undefined), obj);
+function isTruthy(v) {
+  if (v == null || v === false || v === 0 || v === '') return false;
+  if (Array.isArray(v) && v.length === 0) return false;
+  return true;
 }
+function getPath(o, p) { return p.split('.').reduce((x,k) => (x!=null && x[k]!==undefined ? x[k] : undefined), o); }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// PREVIEW CONTEXT
-// Valori che rispecchiano ESATTAMENTE l'output di formatterEngine.js:
-//   season/episode = -1 quando non applicabile (non null)
-//   size = intero bytes
-//   audioChannels = stringa "5.1"
-//   languages = array stringhe
+// PREVIEW CONTEXT — rispecchia l'output reale di formatterEngine
 // ═══════════════════════════════════════════════════════════════════════════
-function makePreviewCtx(addonName) {
+function makeCtx(addonName, serviceName) {
   return {
-    stream: {
-      title:         'Movie.2024.1080p.BluRay.HEVC.mkv\n🇮🇹 🇬🇧 ⚡ Real-Debrid\n💾 12.4 GB 👥 87',
-      name:          '[RD⚡] Torrentio',
-      filename:      'Movie.2024.1080p.BluRay.HEVC.mkv',
-      quality:       '1080p',
-      resolution:    '1080p',
-      encode:        'HEVC',
-      hdr:           null,          // null → exists["x"||"y"] restituisce "y"
-      visualTags:    ['BluRay'],
-      audio:         'Atmos',
-      audioChannels: '5.1',
-      audioTags:     ['Atmos', '5.1'],
-      size:          12400000000,   // bytes — {stream.size::bytes} → "12.4 GB"
-      seeders:       87,
-      languages:     ['ITA', 'ENG'],
-      languageEmojis: ['🇮🇹', '🇬🇧'],
-      type:          'Debrid',
-      cached:        true,
-      library:       false,
-      regexMatched:  null,
-      year:          2024,
-      season:        -1,            // -1 come formatterEngine quando non trovato
-      episode:       -1,
-      serviceName:   'Real-Debrid',
+    stream:{
+      title:'Movie.Title.2024.1080p.BluRay.HEVC-GROUP\n🇮🇹 🇬🇧 ⚡ Real-Debrid\n💾 12.4 GB 👥 87',
+      name:'[RD⚡] Torrentio',
+      filename:'Movie.Title.2024.1080p.BluRay.HEVC-GROUP.mkv',
+      quality:'1080p', resolution:'1080p', encode:'HEVC', hdr:null,
+      visualTags:['BluRay'],
+      audio:'Atmos', audioChannels:'5.1', audioTags:['Atmos','5.1'],
+      size:12400000000, seeders:87,
+      languages:['ITA','ENG'], languageEmojis:['🇮🇹','🇬🇧'],
+      type:'Debrid', cached:true, library:false, regexMatched:null,
+      year:2024, season:null, episode:null, serviceName:'Real-Debrid',
     },
-    service: { name: 'Real-Debrid', shortName: 'RD' },
-    addon:   { name: addonName || 'Addon' },
+    service:{name: serviceName || 'Real-Debrid', shortName:'RD'},
+    addon:{name: addonName || 'Torrentio'},
   };
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
 // SNIPPETS & VARIABLES
 // ═══════════════════════════════════════════════════════════════════════════
-const SNIP_NAME = [
-  { l: '{stream.quality}',                  v: '{stream.quality}' },
-  { l: '{stream.quality} | {service.name}', v: '{stream.quality} | {service.name}' },
-  { l: '{stream.encode}',                   v: '{stream.encode}' },
-  { l: '{stream.size::bytes}',              v: '{stream.size::bytes}' },
-  { l: '{addon.name}',                      v: '{addon.name}' },
+const SNIP_N = [
+  {l:'{stream.quality}',v:'{stream.quality}'},
+  {l:'{stream.quality} | {service.name}',v:'{stream.quality} | {service.name}'},
+  {l:'{stream.encode}',v:'{stream.encode}'},
+  {l:'{stream.size::bytes}',v:'{stream.size::bytes}'},
+  {l:'{addon.name}',v:'{addon.name}'},
+  {l:'🔹 {stream.quality}',v:'🔹 {stream.quality}'},
 ];
-const SNIP_DESC = [
-  { l: '{stream.filename}',                         v: '{stream.filename}' },
-  { l: '⚡ {stream.seeders} S',                     v: '⚡ {stream.seeders} S' },
-  { l: '{stream.languageEmojis}',                   v: '{stream.languageEmojis}' },
-  { l: '{stream.size::bytes} · {service.name}',     v: '{stream.size::bytes} · {service.name}' },
-  { l: '{stream.audio}',                            v: '{stream.audio}' },
-  { l: '{stream.audioChannels::exists::or::stream.audioTags::exists[""||"-"]}',
-                                                     v: '{stream.audioChannels::exists::or::stream.audioTags::exists[""||"-"]}' },
-  { l: '{stream.quality::exists["1080p"||"-"]}',    v: '{stream.quality::exists["1080p"||"-"]}' },
+const SNIP_D = [
+  {l:'{stream.filename}',v:'{stream.filename}'},
+  {l:'{stream.languageEmojis}',v:'{stream.languageEmojis}'},
+  {l:'⚡ {stream.seeders} S',v:'⚡ {stream.seeders} S'},
+  {l:'{stream.audio}',v:'{stream.audio}'},
+  {l:'{stream.size::bytes} · {service.name}',v:'{stream.size::bytes} · {service.name}'},
+  {l:'{stream.audioChannels::exists[""||"-"]}',v:'{stream.audioChannels::exists[""||"-"]}'},
+  {l:'{stream.hdr::exists[""||""]}',v:'{stream.hdr::exists[""||""]}'},
 ];
-const VARIABLES = [
-  ['{stream.quality}',       'Risoluzione (1080p, 4K…)'],
-  ['{stream.resolution}',    'Alias di quality'],
-  ['{stream.encode}',        'Codec (HEVC, x264…)'],
-  ['{stream.hdr}',           'HDR tag (HDR10, DV…) — null se assente'],
-  ['{stream.audio}',         'Audio principale (Atmos, DTS…)'],
-  ['{stream.audioChannels}', 'Canali (5.1, 7.1…)'],
-  ['{stream.audioTags}',     'Lista tag audio'],
-  ['{stream.size::bytes}',   'Dimensione file (es. 12.4 GB)'],
-  ['{stream.seeders}',       'Numero seeders'],
-  ['{stream.filename}',      'Nome file originale'],
-  ['{stream.title}',         'Title raw upstream'],
-  ['{stream.languages}',     'Codici ISO (ITA, ENG…)'],
+const VARS = [
+  ['{stream.quality}','Risoluzione (1080p, 4K…)'],
+  ['{stream.encode}','Codec (HEVC, x264…)'],
+  ['{stream.hdr}','HDR tag — null se assente'],
+  ['{stream.audio}','Audio (Atmos, TrueHD…)'],
+  ['{stream.audioChannels}','Canali (5.1, 7.1…)'],
+  ['{stream.audioTags}','Lista audio tags'],
+  ['{stream.size::bytes}','File size (12.4 GB)'],
+  ['{stream.seeders}','Seeders'],
+  ['{stream.filename}','Nome file'],
+  ['{stream.languages}','Lingue (ITA, ENG…)'],
   ['{stream.languageEmojis}','Flag emoji 🇮🇹 🇬🇧'],
-  ['{stream.type}',          'Tipo (HTTP / Torrent / Debrid)'],
-  ['{stream.cached}',        'true se in cache debrid'],
-  ['{stream.regexMatched}',  'Regex badge (o null)'],
-  ['{stream.year}',          'Anno'],
-  ['{stream.season}',        'Stagione (>0 se serie)'],
-  ['{stream.episode}',       'Episodio (>0 se serie)'],
-  ['{service.name}',         'Nome servizio (Real-Debrid…)'],
-  ['{service.shortName}',    'Sigla (RD, AD…)'],
-  ['{addon.name}',           'Nome addon'],
+  ['{stream.visualTags}','Visual tags (BluRay…)'],
+  ['{stream.type}','Tipo (Debrid/Torrent/HTTP)'],
+  ['{stream.cached}','true se in cache'],
+  ['{stream.regexMatched}','Regex badge / null'],
+  ['{stream.year}','Anno'],
+  ['{stream.season}','Stagione (>0 se serie)'],
+  ['{stream.episode}','Episodio (>0 se serie)'],
+  ['{service.name}','Servizio (Real-Debrid…)'],
+  ['{service.shortName}','Sigla (RD, AD…)'],
+  ['{addon.name}','Nome addon'],
 ];
 
 // ═══════════════════════════════════════════════════════════════════════════
 // STATE
 // ═══════════════════════════════════════════════════════════════════════════
-let prov = 'stremio', token = null, addons = [], config = null;
-try { token = localStorage.getItem('fm_token'); prov = localStorage.getItem('fm_prov') || 'stremio'; } catch(_) {}
+let prov='stremio', token=null, addons=[], config=null;
+try{ token=localStorage.getItem('fm_token'); prov=localStorage.getItem('fm_prov')||'stremio'; }catch(_){}
 
 // ═══════════════════════════════════════════════════════════════════════════
 // UI HELPERS
 // ═══════════════════════════════════════════════════════════════════════════
-function switchProv(p) {
-  prov = p;
-  try { localStorage.setItem('fm_prov', p); } catch(_) {}
-  document.getElementById('login-panel').setAttribute('data-prov', p);
-  document.getElementById('config-panel').setAttribute('data-prov', p);
-  document.getElementById('login-btn').textContent = `Log in with ${p === 'nuvio' ? 'Nuvio' : 'Stremio'}`;
+function switchProv(p){
+  prov=p; try{localStorage.setItem('fm_prov',p)}catch(_){}
+  document.getElementById('login-panel').setAttribute('data-prov',p);
+  document.getElementById('config-panel').setAttribute('data-prov',p);
+  document.getElementById('login-btn').textContent=`Log in with ${p==='nuvio'?'Nuvio':'Stremio'}`;
 }
-function showErr(msg) { const e = document.getElementById('login-err'); e.textContent = msg; e.style.display = 'block'; }
-function clearErr()   { document.getElementById('login-err').style.display = 'none'; }
-function toast(msg, type = 'success') {
-  const el = document.getElementById('toast');
-  el.textContent = msg; el.className = `toast ${type} show`;
-  setTimeout(() => el.classList.remove('show'), 2800);
+function showErr(m){const e=document.getElementById('login-err');e.textContent=m;e.style.display='block'}
+function clearErr(){document.getElementById('login-err').style.display='none'}
+function toast(m,type='ok'){
+  const el=document.getElementById('toast');
+  el.textContent=m;el.className=`toast ${type} show`;
+  setTimeout(()=>el.classList.remove('show'),2600);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// AUTH
+// LOGIN
 // ═══════════════════════════════════════════════════════════════════════════
-async function doLogin() {
+async function doLogin(){
   clearErr();
-  const email = document.getElementById('email').value.trim();
-  const pass  = document.getElementById('password').value;
-  if (!email || !pass) { showErr('Fill in all fields.'); return; }
-  const btn = document.getElementById('login-btn');
-  btn.disabled = true; btn.innerHTML = '<span class="spin"></span> Logging in…';
-  try {
-    const res  = await fetch(prov === 'nuvio' ? '/api/auth/login/nuvio' : '/api/auth/login', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password: pass }),
+  const email=document.getElementById('email').value.trim();
+  const pass=document.getElementById('password').value;
+  if(!email||!pass){showErr('Fill in all fields.');return}
+  const btn=document.getElementById('login-btn');
+  btn.disabled=true;btn.innerHTML='<span class="sp"></span> Logging in…';
+  try{
+    const res=await fetch(prov==='nuvio'?'/api/auth/login/nuvio':'/api/auth/login',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({email,password:pass}),
     });
-    const data = await res.json();
-    if (!res.ok) { showErr(data.error || 'Invalid credentials.'); return; }
-    token = data.token;
-    try { localStorage.setItem('fm_token', token); } catch(_) {}
+    const data=await res.json();
+    if(!res.ok){showErr(data.error||'Invalid credentials.');return}
+    token=data.token;
+    try{localStorage.setItem('fm_token',token)}catch(_){}
     await loadConfigScreen();
-  } catch(_) { showErr('Server unreachable.'); }
-  finally { btn.disabled = false; btn.textContent = `Log in with ${prov === 'nuvio' ? 'Nuvio' : 'Stremio'}`; }
+  }catch(_){showErr('Server unreachable.')}
+  finally{btn.disabled=false;btn.textContent=`Log in with ${prov==='nuvio'?'Nuvio':'Stremio'}`}
 }
 
-async function loadConfigScreen() {
-  try { const r = await fetch('/api/config', { headers: { Authorization: 'Bearer ' + token } }); if (r.ok) config = (await r.json()).config; } catch(_) {}
-  try { const r = await fetch('/api/addons',  { headers: { Authorization: 'Bearer ' + token } }); if (r.ok) addons = (await r.json()).addons || []; } catch(_) {}
-  try {
-    const r = await fetch('/api/me', { headers: { Authorization: 'Bearer ' + token } });
-    if (r.ok) {
-      const me = await r.json();
-      const base = window.location.origin;
-      const httpUrl = `${base}/proxy/${me.userId}/manifest.json`;
-      document.getElementById('url-text').textContent = httpUrl;
-      const lnk = document.getElementById('install-link');
-      lnk.href = prov === 'nuvio' ? httpUrl : `stremio://${window.location.host}/proxy/${me.userId}/manifest.json`;
-      lnk.textContent = prov === 'nuvio' ? '📥 Install in Nuvio' : '📥 Install in Stremio';
+// ═══════════════════════════════════════════════════════════════════════════
+// LOAD CONFIG SCREEN
+// ═══════════════════════════════════════════════════════════════════════════
+async function loadConfigScreen(){
+  try{const r=await fetch('/api/config',{headers:{Authorization:'Bearer '+token}});if(r.ok)config=(await r.json()).config}catch(_){}
+  try{const r=await fetch('/api/addons',{headers:{Authorization:'Bearer '+token}});if(r.ok)addons=(await r.json()).addons||[]}catch(_){}
+  try{
+    const r=await fetch('/api/me',{headers:{Authorization:'Bearer '+token}});
+    if(r.ok){
+      const me=await r.json();
+      const base=window.location.origin;
+      const http=`${base}/proxy/${me.userId}/manifest.json`;
+      document.getElementById('url-text').textContent=http;
+      const lnk=document.getElementById('install-link');
+      lnk.href=prov==='nuvio'?http:`stremio://${window.location.host}/proxy/${me.userId}/manifest.json`;
+      lnk.textContent=prov==='nuvio'?'📥 Install in Nuvio':'📥 Install in Stremio';
     }
-  } catch(_) {}
-  document.getElementById('prov-badge').textContent = `· ${prov === 'nuvio' ? 'Nuvio' : 'Stremio'}`;
-  document.getElementById('config-panel').setAttribute('data-prov', prov);
+  }catch(_){}
+
+  document.getElementById('prov-badge').textContent=`· ${prov==='nuvio'?'Nuvio':'Stremio'}`;
+  document.getElementById('config-panel').setAttribute('data-prov',prov);
+
+  // Pre-fill global template if saved
+  const gc=config?.globalTemplate||{};
+  if(gc.titleTemplate) document.getElementById('global-name').value=gc.titleTemplate;
+  if(gc.descriptionTemplate) document.getElementById('global-desc').value=gc.descriptionTemplate;
+
+  // Populate global snippets
+  fillSnippets('gsnip-name',SNIP_N,'global-name',()=>updateGlobalPreview());
+  fillSnippets('gsnip-desc',SNIP_D,'global-desc',()=>updateGlobalPreview());
+  updateGlobalPreview();
+
   renderAddonList();
-  document.getElementById('login-panel').style.display  = 'none';
-  document.getElementById('config-panel').style.display = 'block';
+
+  document.getElementById('login-panel').style.display='none';
+  document.getElementById('config-panel').style.display='block';
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// GLOBAL TEMPLATE
+// ═══════════════════════════════════════════════════════════════════════════
+function onGlobalChange(){
+  updateGlobalPreview();
+  // Propagate to all per-addon previews
+  addons.filter(a=>a.isProxiable).forEach(a=>updateAddonPreview(a.id));
+}
+
+function updateGlobalPreview(){
+  const nt=document.getElementById('global-name').value;
+  const dt=document.getElementById('global-desc').value;
+  const ctx=makeCtx('Torrentio','Real-Debrid');
+  document.getElementById('g-prev-name').textContent=parseTemplate(nt,ctx)||'—';
+  document.getElementById('g-prev-desc').textContent=parseTemplate(dt,ctx)||'—';
+}
+
+// Restituisce il template effettivo: per-addon se valorizzato, altrimenti global
+function effectiveName(addonId){
+  const perAddon=document.getElementById(`name-${addonId}`)?.value||'';
+  const global=document.getElementById('global-name').value||'';
+  return perAddon||global;
+}
+function effectiveDesc(addonId){
+  const perAddon=document.getElementById(`desc-${addonId}`)?.value||'';
+  const global=document.getElementById('global-desc').value||'';
+  return perAddon||global;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
 // ADDON LIST
 // ═══════════════════════════════════════════════════════════════════════════
-function renderAddonList() {
-  const container = document.getElementById('addon-list');
-  const proxiable = addons.filter(a => a.isProxiable);
-  if (!proxiable.length) {
-    container.innerHTML = '<p style="font-size:.82rem;color:var(--muted)">No proxiable addons found.</p>';
+function renderAddonList(){
+  const container=document.getElementById('addon-list');
+  const proxiable=addons.filter(a=>a.isProxiable);
+  if(!proxiable.length){
+    container.innerHTML='<p style="font-size:.78rem;color:var(--muted)">No proxiable addons found. Try syncing your account.</p>';
     return;
   }
-  container.innerHTML = '';
+  container.innerHTML='';
 
-  proxiable.forEach(addon => {
-    const saved   = config?.addonConfigs?.find(c => c.addonId === addon.id) || {};
-    const nameVal = saved.titleTemplate       ?? '{stream.quality} | {service.name}';
-    const descVal = saved.descriptionTemplate ?? '{stream.filename}\n{stream.languageEmojis} {stream.audio}\n💾 {stream.size::bytes} · {service.name}';
-    const enabled = saved.enabled !== false;
-    const initials = (addon.name || '?').replace(/[^A-Za-z0-9]/g, '').slice(0, 3).toUpperCase();
-    const logoHtml = addon.logo
-      ? `<img class="addon-logo" src="${addon.logo}" alt="" onerror="this.outerHTML='<div class=addon-logo-fb>${initials}</div>'">`
-      : `<div class="addon-logo-fb">${initials}</div>`;
+  proxiable.forEach(addon=>{
+    const saved=config?.addonConfigs?.find(c=>c.addonId===addon.id)||{};
+    const nameVal=saved.titleTemplate||'';
+    const descVal=saved.descriptionTemplate||'';
+    const enabled=saved.enabled!==false;
+    const initials=(addon.name||'?').replace(/[^A-Za-z0-9]/g,'').slice(0,3).toUpperCase();
+    const logoHtml=addon.logo
+      ?`<img class="addon-logo" src="${addon.logo}" alt="" onerror="this.outerHTML='<div class=addon-logo-fb>${initials}</div>'">`
+      :`<div class="addon-logo-fb">${initials}</div>`;
 
-    const card = document.createElement('div');
-    card.className = 'addon-card'; card.id = `card-${addon.id}`;
-    card.innerHTML = `
+    const card=document.createElement('div');
+    card.className='addon-card';card.id=`card-${addon.id}`;
+    card.innerHTML=`
       <div class="addon-header" onclick="toggleCard('${addon.id}')">
         ${logoHtml}
-        <span class="addon-name">${addon.name}</span>
-        <span class="addon-chevron">▶</span>
+        <span class="addon-title">${addon.name}</span>
+        <span class="addon-meta" id="ameta-${addon.id}">${enabled?'enabled':'disabled'}</span>
+        <span class="chevron">▶</span>
       </div>
       <div class="addon-body">
-        <div class="addon-toggle">
-          <div class="toggle-track ${enabled ? 'on' : ''}" id="tog-${addon.id}" onclick="flipTog('${addon.id}')">
-            <div class="toggle-thumb"></div>
+        <div class="toggle-row">
+          <div class="track ${enabled?'on':''}" id="tog-${addon.id}" onclick="flipTog('${addon.id}')">
+            <div class="thumb"></div>
           </div>
-          <span class="toggle-lbl" id="tog-lbl-${addon.id}">${enabled ? 'Enabled' : 'Disabled'}</span>
+          <span class="toggle-lbl" id="tog-lbl-${addon.id}">${enabled?'Enabled':'Disabled'}</span>
+          <span style="margin-left:auto;font-size:.66rem;color:var(--dim)">Leave templates empty to use Global</span>
         </div>
-        <div class="template-grid">
+        <div class="tmpl-grid">
           <div>
-            <div class="tmpl-label">Name template <span style="color:var(--dim)">(stream.name)</span></div>
-            <textarea class="tmpl-input" id="name-${addon.id}" oninput="updatePreview('${addon.id}')">${nameVal}</textarea>
+            <div class="tmpl-col-label">Name template <span>(overrides global)</span></div>
+            <textarea class="tmpl" id="name-${addon.id}" oninput="updateAddonPreview('${addon.id}')"
+              placeholder="Leave empty → use Global">${nameVal}</textarea>
           </div>
           <div>
-            <div class="tmpl-label">Description template <span style="color:var(--dim)">(stream.title)</span></div>
-            <textarea class="tmpl-input" id="desc-${addon.id}" oninput="updatePreview('${addon.id}')">${descVal}</textarea>
+            <div class="tmpl-col-label">Description template <span>(overrides global)</span></div>
+            <textarea class="tmpl" id="desc-${addon.id}" oninput="updateAddonPreview('${addon.id}')"
+              placeholder="Leave empty → use Global">${descVal}</textarea>
           </div>
         </div>
-        <div class="snippets-section">
-          <div class="snippets-title">Name snippets</div>
-          <div class="snippets-row" id="sn-name-${addon.id}"></div>
+        <div class="snip-section">
+          <div class="snip-label">Name snippets</div>
+          <div class="snip-row" id="sn-${addon.id}-name"></div>
         </div>
-        <div class="snippets-section" style="margin-top:6px">
-          <div class="snippets-title">Description snippets</div>
-          <div class="snippets-row" id="sn-desc-${addon.id}"></div>
+        <div class="snip-section" style="margin-top:5px">
+          <div class="snip-label">Description snippets</div>
+          <div class="snip-row" id="sn-${addon.id}-desc"></div>
         </div>
         <div class="vars-toggle" onclick="toggleVars('${addon.id}')">
-          <span id="vars-arr-${addon.id}">▶</span> <span>Available variables</span>
+          <span id="varr-${addon.id}">▶</span> Available variables
         </div>
         <div class="vars-panel" id="vars-${addon.id}">
-          <div class="vars-grid" id="vgrid-${addon.id}"></div>
+          <div class="vars-grid" id="vg-${addon.id}"></div>
         </div>
         <div class="preview-section">
-          <div class="preview-label">Preview</div>
+          <div class="preview-lbl">Preview <span style="font-size:.6rem;color:var(--dim)">(shows effective template)</span></div>
           <div class="preview-box">
-            <div class="preview-name"  id="pname-${addon.id}">—</div>
-            <div class="preview-title" id="pdesc-${addon.id}">—</div>
+            <div class="prev-name" id="pn-${addon.id}">—</div>
+            <div class="prev-desc" id="pd-${addon.id}">—</div>
           </div>
         </div>
         <div class="upload-row">
           <label class="upload-lbl" for="file-${addon.id}">📁 Upload .json badges</label>
           <input type="file" class="file-input" id="file-${addon.id}" accept=".json" onchange="handleJson(event,'${addon.id}')">
-          <span class="upload-status" id="fstatus-${addon.id}">No file chosen</span>
+          <span class="upload-status" id="fst-${addon.id}">No file chosen</span>
         </div>
       </div>`;
     container.appendChild(card);
 
-    fillSnippets(`sn-name-${addon.id}`, SNIP_NAME, `name-${addon.id}`);
-    fillSnippets(`sn-desc-${addon.id}`, SNIP_DESC, `desc-${addon.id}`);
+    fillSnippets(`sn-${addon.id}-name`,SNIP_N,`name-${addon.id}`,()=>updateAddonPreview(addon.id));
+    fillSnippets(`sn-${addon.id}-desc`,SNIP_D,`desc-${addon.id}`,()=>updateAddonPreview(addon.id));
 
-    const vgrid = document.getElementById(`vgrid-${addon.id}`);
-    VARIABLES.forEach(([name, desc]) => {
-      const el = document.createElement('div'); el.className = 'var-item';
-      el.innerHTML = `<span class="var-name">${name}</span> <span class="var-desc">${desc}</span>`;
-      vgrid.appendChild(el);
+    const vg=document.getElementById(`vg-${addon.id}`);
+    VARS.forEach(([k,v])=>{
+      const el=document.createElement('div');el.className='var-row';
+      el.innerHTML=`<span class="var-k">${k}</span> <span class="var-v">${v}</span>`;
+      vg.appendChild(el);
     });
 
-    updatePreview(addon.id);
+    updateAddonPreview(addon.id);
   });
 }
 
-function toggleCard(id) { document.getElementById(`card-${id}`).classList.toggle('open'); }
-function flipTog(id) {
-  const t = document.getElementById(`tog-${id}`); t.classList.toggle('on');
-  document.getElementById(`tog-lbl-${id}`).textContent = t.classList.contains('on') ? 'Enabled' : 'Disabled';
+function toggleCard(id){
+  const c=document.getElementById(`card-${id}`);c.classList.toggle('open');
 }
-function toggleVars(id) {
-  const p = document.getElementById(`vars-${id}`); p.classList.toggle('open');
-  document.getElementById(`vars-arr-${id}`).textContent = p.classList.contains('open') ? '▼' : '▶';
+function flipTog(id){
+  const t=document.getElementById(`tog-${id}`);t.classList.toggle('on');
+  const on=t.classList.contains('on');
+  document.getElementById(`tog-lbl-${id}`).textContent=on?'Enabled':'Disabled';
+  document.getElementById(`ameta-${id}`).textContent=on?'enabled':'disabled';
 }
-function fillSnippets(cid, snippets, tid) {
-  const c = document.getElementById(cid);
-  snippets.forEach(s => {
-    const el = document.createElement('span'); el.className = 'snippet'; el.textContent = s.l;
-    el.onclick = () => insertSnippet(tid, s.v); c.appendChild(el);
+function toggleVars(id){
+  const p=document.getElementById(`vars-${id}`);p.classList.toggle('open');
+  document.getElementById(`varr-${id}`).textContent=p.classList.contains('open')?'▼':'▶';
+}
+
+function fillSnippets(cid,snippets,tid,cb){
+  const c=document.getElementById(cid);if(!c)return;
+  snippets.forEach(s=>{
+    const el=document.createElement('span');el.className='snip';el.textContent=s.l;
+    el.onclick=()=>{insertSnippet(tid,s.v);if(cb)cb()};
+    c.appendChild(el);
   });
 }
-function insertSnippet(tid, val) {
-  const el = document.getElementById(tid); if (!el) return;
-  const s = el.selectionStart, e2 = el.selectionEnd;
-  el.value = el.value.slice(0, s) + val + el.value.slice(e2);
-  el.selectionStart = el.selectionEnd = s + val.length;
-  el.focus(); el.dispatchEvent(new Event('input'));
+function insertSnippet(tid,val){
+  const el=document.getElementById(tid);if(!el)return;
+  const s=el.selectionStart,e2=el.selectionEnd;
+  el.value=el.value.slice(0,s)+val+el.value.slice(e2);
+  el.selectionStart=el.selectionEnd=s+val.length;
+  el.focus();el.dispatchEvent(new Event('input'));
 }
-function updatePreview(addonId) {
-  const nameT = document.getElementById(`name-${addonId}`)?.value || '';
-  const descT = document.getElementById(`desc-${addonId}`)?.value || '';
-  const addon = addons.find(a => a.id === addonId);
-  const ctx   = makePreviewCtx(addon?.name);
-  // Override service.name con il nome dell'addon reale
-  ctx.service.name = addon?.name || 'Addon';
-  document.getElementById(`pname-${addonId}`).textContent = parseTemplate(nameT, ctx) || '—';
-  document.getElementById(`pdesc-${addonId}`).textContent = parseTemplate(descT, ctx) || '—';
+
+function updateAddonPreview(addonId){
+  const addon=addons.find(a=>a.id===addonId);
+  const ctx=makeCtx(addon?.name,addon?.name);
+  ctx.service.name=addon?.name||'Addon';
+  document.getElementById(`pn-${addonId}`).textContent=parseTemplate(effectiveName(addonId),ctx)||'—';
+  document.getElementById(`pd-${addonId}`).textContent=parseTemplate(effectiveDesc(addonId),ctx)||'—';
 }
-function handleJson(event, addonId) {
-  const file = event.target.files[0]; if (!file) return;
-  const reader = new FileReader();
-  reader.onload = e => {
-    try {
-      JSON.parse(e.target.result);
-      document.getElementById(`file-${addonId}`).setAttribute('data-json', e.target.result);
-      document.getElementById(`fstatus-${addonId}`).textContent = '✓ ' + file.name;
-      document.getElementById(`fstatus-${addonId}`).style.color = 'var(--green)';
-    } catch(_) {
-      document.getElementById(`fstatus-${addonId}`).textContent = '✗ Invalid JSON';
-      document.getElementById(`fstatus-${addonId}`).style.color = 'var(--red)';
+
+// ── JSON upload con aggiornamento anteprima ───────────────────────────────
+function handleJson(event,addonId){
+  const file=event.target.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{
+      const parsed=JSON.parse(e.target.result);
+      document.getElementById(`file-${addonId}`).setAttribute('data-json',e.target.result);
+      document.getElementById(`fst-${addonId}`).textContent='✓ '+file.name;
+      document.getElementById(`fst-${addonId}`).style.color='var(--green)';
+
+      // Mostra il numero di badge caricati nell'anteprima
+      const badges=Array.isArray(parsed.badges)?parsed.badges:Array.isArray(parsed)?parsed:[];
+      if(badges.length){
+        const info=document.createElement('div');
+        info.style.cssText='font-size:.68rem;color:var(--green);margin-top:5px';
+        info.textContent=`✓ ${badges.length} badge rules loaded`;
+        const existingInfo=document.getElementById(`badge-info-${addonId}`);
+        if(existingInfo) existingInfo.remove();
+        info.id=`badge-info-${addonId}`;
+        document.getElementById(`fst-${addonId}`).after(info);
+      }
+    }catch(_){
+      document.getElementById(`fst-${addonId}`).textContent='✗ Invalid JSON';
+      document.getElementById(`fst-${addonId}`).style.color='var(--red)';
     }
   };
   reader.readAsText(file);
@@ -531,71 +642,83 @@ function handleJson(event, addonId) {
 // ═══════════════════════════════════════════════════════════════════════════
 // SAVE
 // ═══════════════════════════════════════════════════════════════════════════
-async function saveConfig() {
-  const btn = document.getElementById('save-btn');
-  btn.disabled = true; btn.innerHTML = '<span class="spin"></span> Saving…';
+async function saveConfig(){
+  const btn=document.getElementById('save-btn');
+  btn.disabled=true;btn.innerHTML='<span class="sp"></span> Saving…';
 
-  const addonConfigs = addons.filter(a => a.isProxiable).map(addon => {
-    const tog     = document.getElementById(`tog-${addon.id}`);
-    const enabled = tog ? tog.classList.contains('on') : true;
-    const nameT   = document.getElementById(`name-${addon.id}`)?.value || null;
-    const descT   = document.getElementById(`desc-${addon.id}`)?.value || null;
-    const jsonEl  = document.getElementById(`file-${addon.id}`);
-    const jsonStr = jsonEl?.getAttribute('data-json');
-    let badges = [];
-    if (jsonStr) { try { const p = JSON.parse(jsonStr); badges = Array.isArray(p.badges) ? p.badges : Array.isArray(p) ? p : []; } catch(_) {} }
-    return {
-      addonId: addon.id, slug: addon.slug || addon.id.toLowerCase(),
-      name: addon.name, transportUrl: addon.transportUrl || 'https://localhost',
-      enabled, idPrefixes: addon.idPrefixes || [], types: addon.types || ['movie', 'series'],
-      logo: addon.logo || null, nameTemplate: null,
-      titleTemplate: nameT,        // → stream.name in Stremio
-      descriptionTemplate: descT,  // → stream.title in Stremio
+  const globalName=document.getElementById('global-name').value||null;
+  const globalDesc=document.getElementById('global-desc').value||null;
+
+  const addonConfigs=addons.filter(a=>a.isProxiable).map(addon=>{
+    const tog=document.getElementById(`tog-${addon.id}`);
+    const enabled=tog?tog.classList.contains('on'):true;
+    // Per-addon template: se vuoto usa il global
+    const perName=document.getElementById(`name-${addon.id}`)?.value||null;
+    const perDesc=document.getElementById(`desc-${addon.id}`)?.value||null;
+    const finalName=perName||globalName;
+    const finalDesc=perDesc||globalDesc;
+    const jsonEl=document.getElementById(`file-${addon.id}`);
+    const jsonStr=jsonEl?.getAttribute('data-json');
+    let badges=[];
+    if(jsonStr){try{const p=JSON.parse(jsonStr);badges=Array.isArray(p.badges)?p.badges:Array.isArray(p)?p:[];}catch(_){}}
+    return{
+      addonId:addon.id,slug:addon.slug||addon.id.toLowerCase(),
+      name:addon.name,transportUrl:addon.transportUrl||'https://localhost',
+      enabled,idPrefixes:addon.idPrefixes||[],types:addon.types||['movie','series'],
+      logo:addon.logo||null,nameTemplate:null,
+      titleTemplate:finalName,       // → stream.name
+      descriptionTemplate:finalDesc, // → stream.title
       badges,
     };
   });
 
-  const payload = {
-    globalBadges: config?.globalBadges || [],
+  const payload={
+    globalBadges:config?.globalBadges||[],
     addonConfigs,
-    settings: config?.settings || { mergeStreams: false },
+    settings:config?.settings||{mergeStreams:false},
+    // Salviamo anche i template globali grezzi per ripopolare il form al prossimo accesso
+    globalTemplate:{titleTemplate:globalName,descriptionTemplate:globalDesc},
   };
 
-  try {
-    const res  = await fetch('/api/config', {
-      method: 'PUT', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
-      body: JSON.stringify(payload),
+  try{
+    const res=await fetch('/api/config',{
+      method:'PUT',headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},
+      body:JSON.stringify(payload),
     });
-    const data = await res.json();
-    if (res.ok && data.success) { toast('Configuration saved!'); config = payload; }
-    else { toast(data.error || 'Validation error', 'error'); console.error(data.details); }
-  } catch(_) { toast('Network error', 'error'); }
-  finally { btn.disabled = false; btn.textContent = '⚡ Save & Update'; }
+    const data=await res.json();
+    if(res.ok&&data.success){toast('Configuration saved!');config=payload}
+    else{toast(data.error||'Validation error','err');console.error(data.details)}
+  }catch(_){toast('Network error','err')}
+  finally{btn.disabled=false;btn.textContent='⚡ Save & Update'}
 }
 
-function copyUrl() {
-  const url = document.getElementById('url-text').textContent;
-  if (!url || url === '—') return;
-  navigator.clipboard.writeText(url).then(() => toast('URL copied!'));
+function copyUrl(){
+  const url=document.getElementById('url-text').textContent;
+  if(!url||url==='—')return;
+  navigator.clipboard.writeText(url).then(()=>toast('URL copied!'));
 }
-function doLogout() {
-  try { localStorage.removeItem('fm_token'); localStorage.removeItem('fm_prov'); } catch(_) {}
-  token = null; config = null; addons = [];
-  document.getElementById('login-panel').style.display  = 'block';
-  document.getElementById('config-panel').style.display = 'none';
-  document.getElementById('email').value = '';
-  document.getElementById('password').value = '';
+function doLogout(){
+  try{localStorage.removeItem('fm_token');localStorage.removeItem('fm_prov')}catch(_){}
+  token=null;config=null;addons=[];
+  document.getElementById('login-panel').style.display='block';
+  document.getElementById('config-panel').style.display='none';
+  document.getElementById('email').value='';
+  document.getElementById('password').value='';
+  document.getElementById('addon-list').innerHTML='<p style="font-size:.8rem;color:var(--muted)">Loading addons…</p>';
+  document.getElementById('global-name').value='';
+  document.getElementById('global-desc').value='';
   switchProv('stremio');
 }
-async function boot() {
+
+async function boot(){
   switchProv(prov);
-  if (token) {
-    const r = await fetch('/api/me', { headers: { Authorization: 'Bearer ' + token } });
-    if (r.ok) await loadConfigScreen();
-    else try { localStorage.removeItem('fm_token'); } catch(_) {}
+  if(token){
+    const r=await fetch('/api/me',{headers:{Authorization:'Bearer '+token}});
+    if(r.ok) await loadConfigScreen();
+    else try{localStorage.removeItem('fm_token')}catch(_){}
   }
 }
-document.readyState === 'loading' ? document.addEventListener('DOMContentLoaded', boot) : boot();
+document.readyState==='loading'?document.addEventListener('DOMContentLoaded',boot):boot();
 </script>
 </body>
 </html>
