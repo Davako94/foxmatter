@@ -1,151 +1,139 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Foxmatter</title>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Foxmatter – Full AIOStreams Variable Support</title>
 <style>
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-:root{
-  --bg:#0a0a0c;--s1:#111114;--s2:#17171b;--s3:#1e1e23;--s4:#26262d;
-  --border:#2e2e36;--border2:#3a3a44;
-  --text:#e8e8ec;--muted:#6b6b78;--dim:#44444f;
-  --green:#00ff88;--green2:#00cc6a;--glow:rgba(0,255,136,.15);
-  --stremio:#8c49e0;--sg:rgba(140,73,224,.18);
-  --nuvio:#ff6b35;--ng:rgba(255,107,53,.18);
-  --red:#f04444;--amber:#f59e0b;--blue:#3b82f6;
-  --r:10px;--r2:7px;--r3:5px;
-}
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:36px 16px 80px}
+  /* ── Reset e variabili ── */
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  :root{
+    --bg:#0a0a0c;--s1:#111114;--s2:#17171b;--s3:#1e1e23;--s4:#26262d;
+    --border:#2e2e36;--border2:#3a3a44;
+    --text:#e8e8ec;--muted:#6b6b78;--dim:#44444f;
+    --green:#00ff88;--green2:#00cc6a;--glow:rgba(0,255,136,.15);
+    --stremio:#8c49e0;--sg:rgba(140,73,224,.18);
+    --nuvio:#ff6b35;--ng:rgba(255,107,53,.18);
+    --red:#f04444;--amber:#f59e0b;--blue:#3b82f6;
+    --r:10px;--r2:7px;--r3:5px;
+  }
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:36px 16px 80px}
+  .brand{font-family:'Courier New',monospace;font-size:1.9rem;font-weight:900;letter-spacing:6px;color:var(--green);text-shadow:0 0 8px rgba(0,255,136,.6),0 0 24px rgba(0,255,136,.2);margin-bottom:3px}
+  .tagline{color:var(--muted);font-size:.78rem;margin-bottom:32px}
+  .panel{width:100%;max-width:860px;background:var(--s1);border:1px solid var(--border);border-radius:var(--r);padding:26px}
+  .panel+.panel{margin-top:14px}
+  #config-panel{display:none}
+  /* tabs, form, buttons, etc. (stile come prima) */
+  .tabs{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:22px}
+  .tab{padding:10px;border-radius:var(--r2);border:1.5px solid var(--border);background:var(--s2);cursor:pointer;font-size:.8rem;font-weight:700;color:var(--muted);display:flex;align-items:center;justify-content:center;gap:6px;transition:all .15s;user-select:none}
+  .tab img{width:14px;height:14px;object-fit:contain}
+  [data-prov="stremio"] #tab-stremio{border-color:var(--stremio);color:var(--stremio);background:var(--sg)}
+  [data-prov="nuvio"]   #tab-nuvio  {border-color:var(--nuvio);color:var(--nuvio);background:var(--ng)}
+  label.lbl{display:block;font-size:.68rem;color:var(--muted);margin:11px 0 4px;text-transform:uppercase;letter-spacing:.6px}
+  input[type=email],input[type=password]{width:100%;padding:9px 12px;background:var(--s2);border:1.5px solid var(--border);border-radius:var(--r2);color:var(--text);font-size:.88rem;outline:none;transition:border-color .15s}
+  [data-prov="stremio"] input:focus{border-color:var(--stremio)}
+  [data-prov="nuvio"]   input:focus{border-color:var(--nuvio)}
+  .hint-box{font-size:.74rem;color:var(--muted);padding:8px 12px;background:var(--s2);border-radius:var(--r2);border-left:3px solid var(--border);line-height:1.55;margin-top:12px}
+  .error-box{font-size:.76rem;color:var(--red);padding:7px 11px;background:rgba(240,68,68,.08);border-radius:var(--r2);border-left:3px solid var(--red);margin-top:11px;display:none}
+  .btn{padding:9px 16px;border:none;border-radius:var(--r2);font-size:.82rem;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:6px;transition:opacity .15s;text-decoration:none}
+  .btn-full{width:100%;margin-top:16px}
+  .btn-full:first-of-type{margin-top:18px}
+  .btn:disabled{opacity:.4;cursor:not-allowed}
+  .btn-green{background:var(--green);color:#000}
+  .btn-ghost{background:transparent;border:1px solid var(--border);color:var(--muted)}
+  .btn-ghost:hover{border-color:var(--border2);color:var(--text)}
+  [data-prov="stremio"] .btn-prov{background:var(--stremio);color:#fff}
+  [data-prov="nuvio"]   .btn-prov{background:var(--nuvio);color:#000}
+  .status-bar{display:flex;align-items:center;gap:8px;font-size:.78rem;margin-bottom:18px}
+  .dot{width:7px;height:7px;border-radius:50%;background:var(--green);flex-shrink:0;box-shadow:0 0 6px var(--green)}
+  .status-ok{color:var(--green);font-weight:700}
+  .section-hdr{font-size:.7rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin:22px 0 10px;display:flex;align-items:center;gap:8px}
+  .section-hdr::after{content:'';flex:1;height:1px;background:var(--border)}
+  hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
+  .global-box{background:var(--s2);border:1.5px solid var(--stremio);border-radius:var(--r);padding:16px;margin-bottom:6px;position:relative}
+  .global-box::before{content:'GLOBAL';position:absolute;top:-9px;left:12px;font-size:.6rem;font-weight:800;color:var(--stremio);background:var(--s1);padding:0 6px;letter-spacing:1px}
+  .global-badge{display:inline-flex;align-items:center;gap:5px;font-size:.7rem;color:var(--stremio);background:var(--sg);border:1px solid var(--stremio);border-radius:20px;padding:2px 9px;margin-bottom:10px}
+  .global-note{font-size:.72rem;color:var(--muted);margin-top:8px;line-height:1.5}
+  .pos-rel{position:relative}
 
-.brand{font-family:'Courier New',monospace;font-size:1.9rem;font-weight:900;letter-spacing:6px;color:var(--green);text-shadow:0 0 8px rgba(0,255,136,.6),0 0 24px rgba(0,255,136,.2);margin-bottom:3px}
-.tagline{color:var(--muted);font-size:.78rem;margin-bottom:32px}
+  /* ── Advanced Variables ── */
+  .adv-box{background:var(--s2);border:1.5px solid var(--border2);border-radius:var(--r);padding:16px;margin:10px 0 6px;position:relative}
+  .adv-box::before{content:'ADVANCED VARIABLES';position:absolute;top:-9px;left:12px;font-size:.6rem;font-weight:800;color:var(--border2);background:var(--s1);padding:0 6px;letter-spacing:1px}
+  .adv-cat{margin-top:12px;border-top:1px solid var(--border);padding-top:10px}
+  .adv-cat:first-child{margin-top:0;border-top:none;padding-top:0}
+  .adv-cat-title{font-size:.65rem;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+  .adv-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px 12px}
+  .adv-field{display:flex;flex-direction:column;gap:2px}
+  .adv-field label{font-size:.6rem;color:var(--dim);text-transform:uppercase;letter-spacing:.4px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .adv-field input{background:var(--s3);border:1px solid var(--border);border-radius:var(--r3);padding:4px 6px;color:var(--text);font-family:monospace;font-size:.7rem;outline:none;transition:border-color .15s;width:100%}
+  .adv-field input:focus{border-color:var(--green)}
+  .adv-field input::placeholder{color:var(--dim);font-size:.6rem}
 
-.panel{width:100%;max-width:720px;background:var(--s1);border:1px solid var(--border);border-radius:var(--r);padding:26px}
-.panel+.panel{margin-top:14px}
-#config-panel{display:none}
-
-.tabs{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:22px}
-.tab{padding:10px;border-radius:var(--r2);border:1.5px solid var(--border);background:var(--s2);cursor:pointer;font-size:.8rem;font-weight:700;color:var(--muted);display:flex;align-items:center;justify-content:center;gap:6px;transition:all .15s;user-select:none}
-.tab img{width:14px;height:14px;object-fit:contain}
-[data-prov="stremio"] #tab-stremio{border-color:var(--stremio);color:var(--stremio);background:var(--sg)}
-[data-prov="nuvio"]   #tab-nuvio  {border-color:var(--nuvio);color:var(--nuvio);background:var(--ng)}
-
-label.lbl{display:block;font-size:.68rem;color:var(--muted);margin:11px 0 4px;text-transform:uppercase;letter-spacing:.6px}
-input[type=email],input[type=password]{width:100%;padding:9px 12px;background:var(--s2);border:1.5px solid var(--border);border-radius:var(--r2);color:var(--text);font-size:.88rem;outline:none;transition:border-color .15s}
-[data-prov="stremio"] input:focus{border-color:var(--stremio)}
-[data-prov="nuvio"]   input:focus{border-color:var(--nuvio)}
-.hint-box{font-size:.74rem;color:var(--muted);padding:8px 12px;background:var(--s2);border-radius:var(--r2);border-left:3px solid var(--border);line-height:1.55;margin-top:12px}
-.error-box{font-size:.76rem;color:var(--red);padding:7px 11px;background:rgba(240,68,68,.08);border-radius:var(--r2);border-left:3px solid var(--red);margin-top:11px;display:none}
-
-.btn{padding:9px 16px;border:none;border-radius:var(--r2);font-size:.82rem;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:6px;transition:opacity .15s;text-decoration:none}
-.btn-full{width:100%;margin-top:16px}
-.btn-full:first-of-type{margin-top:18px}
-.btn:disabled{opacity:.4;cursor:not-allowed}
-.btn-green{background:var(--green);color:#000}
-.btn-ghost{background:transparent;border:1px solid var(--border);color:var(--muted)}
-.btn-ghost:hover{border-color:var(--border2);color:var(--text)}
-[data-prov="stremio"] .btn-prov{background:var(--stremio);color:#fff}
-[data-prov="nuvio"]   .btn-prov{background:var(--nuvio);color:#000}
-
-.status-bar{display:flex;align-items:center;gap:8px;font-size:.78rem;margin-bottom:18px}
-.dot{width:7px;height:7px;border-radius:50%;background:var(--green);flex-shrink:0;box-shadow:0 0 6px var(--green)}
-.status-ok{color:var(--green);font-weight:700}
-
-.section-hdr{font-size:.7rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin:22px 0 10px;display:flex;align-items:center;gap:8px}
-.section-hdr::after{content:'';flex:1;height:1px;background:var(--border)}
-hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
-
-.global-box{background:var(--s2);border:1.5px solid var(--stremio);border-radius:var(--r);padding:16px;margin-bottom:6px;position:relative}
-.global-box::before{content:'GLOBAL';position:absolute;top:-9px;left:12px;font-size:.6rem;font-weight:800;color:var(--stremio);background:var(--s1);padding:0 6px;letter-spacing:1px}
-.global-badge{display:inline-flex;align-items:center;gap:5px;font-size:.7rem;color:var(--stremio);background:var(--sg);border:1px solid var(--stremio);border-radius:20px;padding:2px 9px;margin-bottom:10px}
-.global-note{font-size:.72rem;color:var(--muted);margin-top:8px;line-height:1.5}
-
-/* ── ADVANCED VARIABLES ── */
-.adv-box{background:var(--s2);border:1.5px solid var(--border2);border-radius:var(--r);padding:16px;margin:10px 0 6px}
-.adv-box::before{content:'ADVANCED VARIABLES';position:absolute;top:-9px;left:12px;font-size:.6rem;font-weight:800;color:var(--border2);background:var(--s1);padding:0 6px;letter-spacing:1px}
-.adv-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px 12px}
-.adv-field{display:flex;flex-direction:column;gap:2px}
-.adv-field label{font-size:.6rem;color:var(--dim);text-transform:uppercase;letter-spacing:.4px;font-weight:700}
-.adv-field input{background:var(--s3);border:1px solid var(--border);border-radius:var(--r3);padding:4px 6px;color:var(--text);font-family:monospace;font-size:.7rem;outline:none;transition:border-color .15s}
-.adv-field input:focus{border-color:var(--green)}
-.adv-field input::placeholder{color:var(--dim);font-size:.6rem}
-
-.addon-card{background:var(--s2);border:1px solid var(--border);border-radius:var(--r);margin-bottom:10px;overflow:hidden;transition:border-color .15s}
-.addon-card:hover{border-color:var(--border2)}
-.addon-card.open{border-color:var(--green)}
-.addon-header{display:flex;align-items:center;gap:10px;padding:12px 15px;cursor:pointer}
-.addon-logo{width:26px;height:26px;border-radius:5px;object-fit:contain;flex-shrink:0;background:var(--s3)}
-.addon-logo-fb{width:26px;height:26px;border-radius:5px;flex-shrink:0;background:var(--s3);display:flex;align-items:center;justify-content:center;font-size:.58rem;color:var(--dim);font-weight:800;letter-spacing:.5px}
-.addon-title{font-size:.85rem;font-weight:700;color:var(--green);flex:1}
-.addon-meta{font-size:.68rem;color:var(--dim);margin-left:auto;padding-right:8px}
-.chevron{color:var(--dim);font-size:.7rem;transition:transform .2s;flex-shrink:0}
-.addon-card.open .chevron{transform:rotate(90deg)}
-.addon-body{padding:14px 15px 15px;border-top:1px solid var(--border);display:none}
-.addon-card.open .addon-body{display:block}
-
-.toggle-row{display:flex;align-items:center;gap:7px;margin-bottom:12px}
-.track{width:32px;height:17px;border-radius:9px;background:var(--border);position:relative;cursor:pointer;transition:background .15s;flex-shrink:0}
-.track.on{background:var(--green)}
-.thumb{position:absolute;top:2px;left:2px;width:13px;height:13px;border-radius:50%;background:#fff;transition:left .15s}
-.track.on .thumb{left:17px}
-.toggle-lbl{font-size:.73rem;color:var(--muted)}
-
-.tmpl-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
-.tmpl-col-label{font-size:.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;display:flex;align-items:center;gap:5px}
-.tmpl-col-label span{color:var(--dim);font-size:.6rem}
-textarea.tmpl{width:100%;padding:7px 9px;min-height:68px;background:var(--s3);border:1.5px solid var(--border);border-radius:var(--r3);color:var(--text);font-family:'Courier New',monospace;font-size:.74rem;resize:vertical;outline:none;transition:border-color .15s;line-height:1.5}
-textarea.tmpl:focus{border-color:var(--green)}
-
-.snip-section{margin-top:7px}
-.snip-label{font-size:.62rem;color:var(--dim);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
-.snip-row{display:flex;flex-wrap:wrap;gap:4px}
-.snip{padding:2px 7px;background:var(--s3);border:1px solid var(--border);border-radius:3px;font-family:monospace;font-size:.67rem;color:var(--muted);cursor:pointer;transition:all .12s;white-space:nowrap}
-.snip:hover{border-color:var(--green);color:var(--green);background:var(--glow)}
-
-.vars-toggle{display:flex;align-items:center;gap:5px;font-size:.71rem;color:var(--muted);cursor:pointer;margin-top:10px;user-select:none}
-.vars-toggle:hover{color:var(--text)}
-.vars-panel{margin-top:7px;padding:10px;background:var(--s3);border:1px solid var(--border);border-radius:var(--r2);display:none}
-.vars-panel.open{display:block}
-.vars-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(175px,1fr));gap:3px 10px}
-.var-row{font-size:.68rem}
-.var-k{font-family:monospace;color:var(--green)}
-.var-v{color:var(--dim)}
-
-.preview-section{margin-top:12px}
-.preview-lbl{font-size:.63rem;color:var(--dim);text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px;display:flex;align-items:center;gap:6px}
-.preview-lbl::after{content:'';flex:1;height:1px;background:var(--border)}
-.preview-box{background:#000;border:1px solid var(--border);border-radius:var(--r2);padding:11px 13px}
-.prev-name{font-size:.83rem;font-weight:700;color:#fff;margin-bottom:2px;min-height:1.1em;white-space:pre-wrap}
-.prev-desc{font-size:.73rem;color:#999;line-height:1.5;white-space:pre-wrap;min-height:1.1em}
-
-.upload-row{display:flex;align-items:center;gap:7px;margin-top:9px}
-.file-input{display:none}
-.upload-lbl{padding:4px 10px;background:var(--s3);border:1px dashed var(--border);border-radius:var(--r3);font-size:.7rem;cursor:pointer;color:var(--muted);transition:all .12s;white-space:nowrap}
-.upload-lbl:hover{border-color:var(--green);color:var(--green)}
-.upload-status{font-size:.7rem;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-
-.url-row{display:flex;align-items:center;gap:7px;background:var(--s2);border:1px solid var(--border);border-radius:var(--r2);padding:8px 11px;margin-top:12px}
-.url-row code{flex:1;font-size:.65rem;color:var(--muted);word-break:break-all}
-.copy-btn{padding:3px 10px;background:var(--s3);border:1px solid var(--border);border-radius:4px;color:var(--muted);font-size:.68rem;cursor:pointer;white-space:nowrap}
-.copy-btn:hover{color:var(--text)}
-
-.toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(70px);padding:9px 16px;border-radius:var(--r2);font-size:.8rem;font-weight:600;transition:transform .25s ease;z-index:999;pointer-events:none}
-.toast.show{transform:translateX(-50%) translateY(0)}
-.toast.ok{background:var(--green);color:#000}
-.toast.err{background:var(--red);color:#fff}
-
-.sp{width:12px;height:12px;border-radius:50%;border:2px solid rgba(0,0,0,.15);border-top-color:currentColor;animation:spin .5s linear infinite;display:inline-block}
-@keyframes spin{to{transform:rotate(360deg)}}
-.footer{color:var(--dim);font-size:.67rem;margin-top:26px;text-align:center}
-
-.pos-rel{position:relative}
+  /* addon cards, preview, etc. (stesso stile di prima) */
+  .addon-card{background:var(--s2);border:1px solid var(--border);border-radius:var(--r);margin-bottom:10px;overflow:hidden;transition:border-color .15s}
+  .addon-card:hover{border-color:var(--border2)}
+  .addon-card.open{border-color:var(--green)}
+  .addon-header{display:flex;align-items:center;gap:10px;padding:12px 15px;cursor:pointer}
+  .addon-logo{width:26px;height:26px;border-radius:5px;object-fit:contain;flex-shrink:0;background:var(--s3)}
+  .addon-logo-fb{width:26px;height:26px;border-radius:5px;flex-shrink:0;background:var(--s3);display:flex;align-items:center;justify-content:center;font-size:.58rem;color:var(--dim);font-weight:800;letter-spacing:.5px}
+  .addon-title{font-size:.85rem;font-weight:700;color:var(--green);flex:1}
+  .addon-meta{font-size:.68rem;color:var(--dim);margin-left:auto;padding-right:8px}
+  .chevron{color:var(--dim);font-size:.7rem;transition:transform .2s;flex-shrink:0}
+  .addon-card.open .chevron{transform:rotate(90deg)}
+  .addon-body{padding:14px 15px 15px;border-top:1px solid var(--border);display:none}
+  .addon-card.open .addon-body{display:block}
+  .toggle-row{display:flex;align-items:center;gap:7px;margin-bottom:12px}
+  .track{width:32px;height:17px;border-radius:9px;background:var(--border);position:relative;cursor:pointer;transition:background .15s;flex-shrink:0}
+  .track.on{background:var(--green)}
+  .thumb{position:absolute;top:2px;left:2px;width:13px;height:13px;border-radius:50%;background:#fff;transition:left .15s}
+  .track.on .thumb{left:17px}
+  .toggle-lbl{font-size:.73rem;color:var(--muted)}
+  .tmpl-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
+  .tmpl-col-label{font-size:.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;display:flex;align-items:center;gap:5px}
+  .tmpl-col-label span{color:var(--dim);font-size:.6rem}
+  textarea.tmpl{width:100%;padding:7px 9px;min-height:68px;background:var(--s3);border:1.5px solid var(--border);border-radius:var(--r3);color:var(--text);font-family:'Courier New',monospace;font-size:.74rem;resize:vertical;outline:none;transition:border-color .15s;line-height:1.5}
+  textarea.tmpl:focus{border-color:var(--green)}
+  .snip-section{margin-top:7px}
+  .snip-label{font-size:.62rem;color:var(--dim);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
+  .snip-row{display:flex;flex-wrap:wrap;gap:4px}
+  .snip{padding:2px 7px;background:var(--s3);border:1px solid var(--border);border-radius:3px;font-family:monospace;font-size:.67rem;color:var(--muted);cursor:pointer;transition:all .12s;white-space:nowrap}
+  .snip:hover{border-color:var(--green);color:var(--green);background:var(--glow)}
+  .vars-toggle{display:flex;align-items:center;gap:5px;font-size:.71rem;color:var(--muted);cursor:pointer;margin-top:10px;user-select:none}
+  .vars-toggle:hover{color:var(--text)}
+  .vars-panel{margin-top:7px;padding:10px;background:var(--s3);border:1px solid var(--border);border-radius:var(--r2);display:none}
+  .vars-panel.open{display:block}
+  .vars-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(175px,1fr));gap:3px 10px}
+  .var-row{font-size:.68rem}
+  .var-k{font-family:monospace;color:var(--green)}
+  .var-v{color:var(--dim)}
+  .preview-section{margin-top:12px}
+  .preview-lbl{font-size:.63rem;color:var(--dim);text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px;display:flex;align-items:center;gap:6px}
+  .preview-lbl::after{content:'';flex:1;height:1px;background:var(--border)}
+  .preview-box{background:#000;border:1px solid var(--border);border-radius:var(--r2);padding:11px 13px}
+  .prev-name{font-size:.83rem;font-weight:700;color:#fff;margin-bottom:2px;min-height:1.1em;white-space:pre-wrap}
+  .prev-desc{font-size:.73rem;color:#999;line-height:1.5;white-space:pre-wrap;min-height:1.1em}
+  .upload-row{display:flex;align-items:center;gap:7px;margin-top:9px}
+  .file-input{display:none}
+  .upload-lbl{padding:4px 10px;background:var(--s3);border:1px dashed var(--border);border-radius:var(--r3);font-size:.7rem;cursor:pointer;color:var(--muted);transition:all .12s;white-space:nowrap}
+  .upload-lbl:hover{border-color:var(--green);color:var(--green)}
+  .upload-status{font-size:.7rem;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .url-row{display:flex;align-items:center;gap:7px;background:var(--s2);border:1px solid var(--border);border-radius:var(--r2);padding:8px 11px;margin-top:12px}
+  .url-row code{flex:1;font-size:.65rem;color:var(--muted);word-break:break-all}
+  .copy-btn{padding:3px 10px;background:var(--s3);border:1px solid var(--border);border-radius:4px;color:var(--muted);font-size:.68rem;cursor:pointer;white-space:nowrap}
+  .copy-btn:hover{color:var(--text)}
+  .toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(70px);padding:9px 16px;border-radius:var(--r2);font-size:.8rem;font-weight:600;transition:transform .25s ease;z-index:999;pointer-events:none}
+  .toast.show{transform:translateX(-50%) translateY(0)}
+  .toast.ok{background:var(--green);color:#000}
+  .toast.err{background:var(--red);color:#fff}
+  .sp{width:12px;height:12px;border-radius:50%;border:2px solid rgba(0,0,0,.15);border-top-color:currentColor;animation:spin .5s linear infinite;display:inline-block}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .footer{color:var(--dim);font-size:.67rem;margin-top:26px;text-align:center}
+  .pos-rel{position:relative}
 </style>
 </head>
 <body>
-
 <div class="brand">FOXMATTER</div>
-<p class="tagline">Stream formatting & badges · Stremio & Nuvio</p>
+<p class="tagline">Full AIOStreams Variable Support · Stremio & Nuvio</p>
 
 <!-- ═══ LOGIN ═══ -->
 <div class="panel" id="login-panel" data-prov="stremio">
@@ -206,50 +194,14 @@ textarea.tmpl:focus{border-color:var(--green)}
     <p class="global-note">Leave both fields empty to use per-addon templates only.</p>
   </div>
 
-  <!-- ─── ADVANCED VARIABLES ─── -->
-  <div class="section-hdr" style="margin-top:18px">Advanced Variables</div>
-  <div class="adv-box pos-rel">
+  <!-- ─── ADVANCED VARIABLES (TUTTE) ─── -->
+  <div class="section-hdr" style="margin-top:18px">Advanced Variables – All AIOStreams Fields</div>
+  <div class="adv-box pos-rel" id="adv-box">
     <p style="font-size:.7rem;color:var(--muted);margin-bottom:10px;line-height:1.5">
-      Set custom values for testing your templates. Leave empty to use defaults.
+      Set custom values for testing. Leave empty to use defaults. Arrays use comma separation.
     </p>
-    <div class="adv-grid" id="adv-grid">
-      <!-- Stream Variables -->
-      <div class="adv-field"><label>stream.title</label><input class="adv-input" data-var="stream.title" placeholder="Movie Title" oninput="updateAllPreviews()"></div>
-      <div class="adv-field"><label>stream.filename</label><input class="adv-input" data-var="stream.filename" placeholder="Movie.2023.2160p.mkv" oninput="updateAllPreviews()"></div>
-      <div class="adv-field"><label>stream.folderName</label><input class="adv-input" data-var="stream.folderName" placeholder="Movie.2023.2160p" oninput="updateAllPreviews()"></div>
-      <div class="adv-field"><label>stream.quality</label><input class="adv-input" data-var="stream.quality" placeholder="BluRay" oninput="updateAllPreviews()"></div>
-      <div class="adv-field"><label>stream.resolution</label><input class="adv-input" data-var="stream.resolution" placeholder="2160p" oninput="updateAllPreviews()"></div>
-      <div class="adv-field"><label>stream.encode</label><input class="adv-input" data-var="stream.encode" placeholder="HEVC" oninput="updateAllPreviews()"></div>
-      <div class="adv-field"><label>stream.hdr</label><input class="adv-input" data-var="stream.hdr" placeholder="DV" oninput="updateAllPreviews()"></div>
-      <div class="adv-field"><label>stream.visualTags (comma)</label><input class="adv-input" data-var="stream.visualTags" placeholder="HDR, DV, BluRay" oninput="updateAllPreviews()"></div>
-      <div class="adv-field"><label>stream.audio</label><input class="adv-input" data-var="stream.audio" placeholder="Atmos" oninput="updateAllPreviews()"></div>
-      <div class="adv-field"><label>stream.audioChannels</label><input class="adv-input" data-var="stream.audioChannels" placeholder="7.1" oninput="updateAllPreviews()"></div>
-      <div class="adv-field"><label>stream.audioTags (comma)</label><input class="adv-input" data-var="stream.audioTags" placeholder="Atmos, TrueHD, 7.1" oninput="updateAllPreviews()"></div>
-      <div class="adv-field"><label>stream.size (bytes)</label><input class="adv-input" data-var="stream.size" placeholder="62500000000" oninput="updateAllPreviews()"></div>
-      <div class="adv-field"><label>stream.seeders</label><input class="adv-input" data-var="stream.seeders" placeholder="87" oninput="updateAllPreviews()"></div>
-      <div class="adv-field"><label>stream.languages (comma)</label><input class="adv-input" data-var="stream.languages" placeholder="Italian, English" oninput="updateAllPreviews()"></div>
-      <div class="adv-field"><label>stream.languageEmojis (comma)</label><input class="adv-input" data-var="stream.languageEmojis" placeholder="🇮🇹, 🇬🇧" oninput="updateAllPreviews()"></div>
-      <div class="adv-field"><label>stream.year</label><input class="adv-input" data-var="stream.year" placeholder="2023" oninput="updateAllPreviews()"></div>
-      <div class="adv-field"><label>stream.season</label><input class="adv-input" data-var="stream.season" placeholder="-1" oninput="updateAllPreviews()"></div>
-      <div class="adv-field"><label>stream.episode</label><input class="adv-input" data-var="stream.episode" placeholder="-1" oninput="updateAllPreviews()"></div>
-      <div class="adv-field"><label>stream.releaseGroup</label><input class="adv-input" data-var="stream.releaseGroup" placeholder="GROUP" oninput="updateAllPreviews()"></div>
-      <div class="adv-field"><label>stream.type</label><input class="adv-input" data-var="stream.type" placeholder="Debrid" oninput="updateAllPreviews()"></div>
-      <div class="adv-field"><label>stream.cached</label><input class="adv-input" data-var="stream.cached" placeholder="true" oninput="updateAllPreviews()"></div>
-      <div class="adv-field"><label>stream.regexMatched</label><input class="adv-input" data-var="stream.regexMatched" placeholder="null" oninput="updateAllPreviews()"></div>
-      <div class="adv-field"><label>stream.duration (seconds)</label><input class="adv-input" data-var="stream.duration" placeholder="9120" oninput="updateAllPreviews()"></div>
-      <div class="adv-field"><label>stream.bitrate</label><input class="adv-input" data-var="stream.bitrate" placeholder="54800000" oninput="updateAllPreviews()"></div>
-      <div class="adv-field"><label>stream.container</label><input class="adv-input" data-var="stream.container" placeholder="mkv" oninput="updateAllPreviews()"></div>
-      <div class="adv-field"><label>stream.age</label><input class="adv-input" data-var="stream.age" placeholder="10d" oninput="updateAllPreviews()"></div>
-      
-      <!-- Service Variables -->
-      <div class="adv-field"><label>service.id</label><input class="adv-input" data-var="service.id" placeholder="realdebrid" oninput="updateAllPreviews()"></div>
-      <div class="adv-field"><label>service.shortName</label><input class="adv-input" data-var="service.shortName" placeholder="RD" oninput="updateAllPreviews()"></div>
-      <div class="adv-field"><label>service.name</label><input class="adv-input" data-var="service.name" placeholder="Real-Debrid" oninput="updateAllPreviews()"></div>
-      <div class="adv-field"><label>service.cached</label><input class="adv-input" data-var="service.cached" placeholder="true" oninput="updateAllPreviews()"></div>
-      
-      <!-- Addon Variables -->
-      <div class="adv-field"><label>addon.name</label><input class="adv-input" data-var="addon.name" placeholder="Torrentio" oninput="updateAllPreviews()"></div>
-    </div>
+    <!-- Categorie generate da JS -->
+    <div id="adv-container"></div>
   </div>
 
   <!-- PER-ADDON LIST -->
@@ -263,25 +215,156 @@ textarea.tmpl:focus{border-color:var(--green)}
   <button class="btn btn-full btn-ghost" onclick="doLogout()">↩ Switch account</button>
 </div>
 
-<div class="footer">Foxmatter · open source · self-hostable</div>
+<div class="footer">Foxmatter · full AIOStreams variable support</div>
 <div class="toast" id="toast"></div>
 
 <script>
 // ═══════════════════════════════════════════════════════════════════════════
-// TEMPLATE ENGINE COMPLETO
+// 1. DEFINIZIONE DI TUTTE LE VARIABILI AIOSTREAMS (divise per categoria)
+// ═══════════════════════════════════════════════════════════════════════════
+const VARIABLE_SCHEMA = {
+  'Stream – Source': [
+    { path: 'stream.type', placeholder: 'debrid' },
+    { path: 'stream.proxied', placeholder: 'false' },
+    { path: 'stream.library', placeholder: 'false' },
+    { path: 'stream.indexer', placeholder: 'Torrentio' },
+    { path: 'stream.message', placeholder: 'This is a message' },
+    { path: 'stream.infoHash', placeholder: 'abcdef1234567890' },
+  ],
+  'Stream – File': [
+    { path: 'stream.filename', placeholder: 'Movie.2023.2160p.BluRay.HEVC.mkv' },
+    { path: 'stream.folderName', placeholder: 'Movie.2023.2160p.BluRay' },
+    { path: 'stream.size', placeholder: '62500000000' },
+    { path: 'stream.folderSize', placeholder: '125000000000' },
+    { path: 'stream.bitrate', placeholder: '54800000' },
+    { path: 'stream.duration', placeholder: '9120' },
+    { path: 'stream.container', placeholder: 'mkv' },
+    { path: 'stream.extension', placeholder: '.mkv' },
+  ],
+  'Stream – Video': [
+    { path: 'stream.quality', placeholder: 'BluRay' },
+    { path: 'stream.resolution', placeholder: '2160p' },
+    { path: 'stream.visualTags', placeholder: 'HDR, DV, BluRay' },
+    { path: 'stream.encode', placeholder: 'HEVC' },
+    { path: 'stream.network', placeholder: 'Netflix' },
+    { path: 'stream.hasChapters', placeholder: 'true' },
+  ],
+  'Stream – Audio': [
+    { path: 'stream.audioTags', placeholder: 'Atmos, TrueHD, 7.1' },
+    { path: 'stream.audioChannels', placeholder: '7.1' },
+  ],
+  'Stream – Languages': [
+    { path: 'stream.languages', placeholder: 'Italian, English' },
+    { path: 'stream.languageEmojis', placeholder: '🇮🇹, 🇬🇧' },
+    { path: 'stream.languageCodes', placeholder: 'ita, eng' },
+    { path: 'stream.smallLanguageCodes', placeholder: 'ITA, ENG' },
+    { path: 'stream.uLanguages', placeholder: 'Italian, English' },
+    { path: 'stream.uLanguageEmojis', placeholder: '🇮🇹, 🇬🇧' },
+    { path: 'stream.uLanguageCodes', placeholder: 'ita, eng' },
+    { path: 'stream.uSmallLanguageCodes', placeholder: 'ITA, ENG' },
+    { path: 'stream.dubbed', placeholder: 'false' },
+  ],
+  'Stream – Subtitles': [
+    { path: 'stream.subtitles', placeholder: 'English, French' },
+    { path: 'stream.subtitleEmojis', placeholder: '🇬🇧, 🇫🇷' },
+    { path: 'stream.subtitleCodes', placeholder: 'eng, fra' },
+    { path: 'stream.smallSubtitleCodes', placeholder: 'ENG, FRA' },
+    { path: 'stream.uSubtitles', placeholder: 'English' },
+    { path: 'stream.uSubtitleEmojis', placeholder: '🇬🇧' },
+    { path: 'stream.uSubtitleCodes', placeholder: 'eng' },
+    { path: 'stream.uSmallSubtitleCodes', placeholder: 'ENG' },
+    { path: 'stream.subbed', placeholder: 'true' },
+  ],
+  'Stream – Release': [
+    { path: 'stream.title', placeholder: 'Movie Title' },
+    { path: 'stream.year', placeholder: '2023' },
+    { path: 'stream.date', placeholder: '2023-12-01' },
+    { path: 'stream.releaseGroup', placeholder: 'GROUP' },
+    { path: 'stream.editions', placeholder: "Director's Cut, Extended" },
+    { path: 'stream.repack', placeholder: 'false' },
+    { path: 'stream.regraded', placeholder: 'false' },
+    { path: 'stream.uncensored', placeholder: 'false' },
+    { path: 'stream.unrated', placeholder: 'false' },
+    { path: 'stream.upscaled', placeholder: 'false' },
+  ],
+  'Stream – Season / Episode': [
+    { path: 'stream.seasonPack', placeholder: 'false' },
+    { path: 'stream.seasons', placeholder: '1, 2' },
+    { path: 'stream.formattedSeasons', placeholder: 'S01-S02' },
+    { path: 'stream.folderSeasons', placeholder: '1' },
+    { path: 'stream.formattedFolderSeasons', placeholder: 'S01' },
+    { path: 'stream.episodes', placeholder: '1, 2, 3' },
+    { path: 'stream.formattedEpisodes', placeholder: 'E01-E03' },
+    { path: 'stream.folderEpisodes', placeholder: '1' },
+    { path: 'stream.formattedFolderEpisodes', placeholder: 'E01' },
+    { path: 'stream.seasonEpisode', placeholder: 'S01E01, S01E02' },
+  ],
+  'Stream – P2P / Tracker': [
+    { path: 'stream.seeders', placeholder: '87' },
+    { path: 'stream.private', placeholder: 'false' },
+    { path: 'stream.freeleech', placeholder: 'false' },
+    { path: 'stream.age', placeholder: '10d' },
+    { path: 'stream.ageHours', placeholder: '240' },
+  ],
+  'Stream – Anime': [
+    { path: 'stream.seadex', placeholder: 'false' },
+    { path: 'stream.seadexBest', placeholder: 'false' },
+  ],
+  'Stream – Scoring': [
+    { path: 'stream.regexMatched', placeholder: 'Bluray T1' },
+    { path: 'stream.rankedRegexMatched', placeholder: 'Bluray T1, Web T2' },
+    { path: 'stream.regexScore', placeholder: '95' },
+    { path: 'stream.nRegexScore', placeholder: '85' },
+    { path: 'stream.seScore', placeholder: '90' },
+    { path: 'stream.nSeScore', placeholder: '80' },
+    { path: 'stream.seMatched', placeholder: 'Best Release' },
+    { path: 'stream.rseMatched', placeholder: 'Rule A, Rule B' },
+  ],
+  'Service': [
+    { path: 'service.id', placeholder: 'realdebrid' },
+    { path: 'service.shortName', placeholder: 'RD' },
+    { path: 'service.name', placeholder: 'Real-Debrid' },
+    { path: 'service.cached', placeholder: 'true' },
+  ],
+  'Addon': [
+    { path: 'addon.presetId', placeholder: 'torrentio' },
+    { path: 'addon.name', placeholder: 'Torrentio' },
+    { path: 'addon.manifestUrl', placeholder: 'https://torrentio.strem.fun/manifest.json' },
+  ],
+  'Config': [
+    { path: 'config.addonName', placeholder: 'Foxmatter' },
+  ],
+  'Metadata': [
+    { path: 'metadata.queryType', placeholder: 'movie' },
+    { path: 'metadata.title', placeholder: 'Movie Title' },
+    { path: 'metadata.runtime', placeholder: '152' },
+    { path: 'metadata.episodeRuntime', placeholder: '45' },
+    { path: 'metadata.genres', placeholder: 'Action, Sci-Fi' },
+    { path: 'metadata.year', placeholder: '2023' },
+  ],
+  'Debug': [
+    { path: 'debug.json', placeholder: '{"stream":{"title":"Movie"}}' },
+    { path: 'debug.jsonf', placeholder: '{\n  "stream": {\n    "title": "Movie"\n  }\n}' },
+  ],
+  'Tools': [
+    { path: 'tools.newLine', placeholder: '\\n' },
+    { path: 'tools.removeLine', placeholder: '' },
+  ]
+};
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 2. TEMPLATE ENGINE COMPLETO (con supporto per espressioni annidate)
 // ═══════════════════════════════════════════════════════════════════════════
 
 function parseTemplate(template, ctx) {
   if (!template || typeof template !== 'string') return '';
-  
   return template.replace(/\{([^{}]+)\}/g, (_, expr) => {
+    // Gestione OR
     if (expr.includes('::or::')) {
       const parts = expr.split('::or::');
       for (const part of parts) {
         const r = evalExpr(part.trim(), ctx);
-        if (r !== '' && r != null && r !== false) {
-          return String(r);
-        }
+        if (r !== '' && r != null && r !== false) return String(r);
       }
       return '';
     }
@@ -302,12 +385,13 @@ function evalExpr(expr, ctx) {
   for (let i = 1; i < parts.length; i++) {
     const mod = parts[i].trim();
     
+    // ── CONDIZIONALI ──
     const condMatch = mod.match(/^(exists|~|>|<|=|>=|<=)(?:([^[]*))?\["(.*?)"(?:\s*\|\|\s*"(.*?)")?\]$/);
     if (condMatch) {
       const type = condMatch[1];
       const condVal = (condMatch[2] || '').trim();
-      const trueVal = condMatch[3] || '';
-      const falseVal = condMatch[4] || '';
+      let trueVal = condMatch[3] || '';
+      let falseVal = condMatch[4] || '';
       
       let met = false;
       const strVal = String(val ?? '');
@@ -324,14 +408,20 @@ function evalExpr(expr, ctx) {
       }
       
       if (met) {
-        return trueVal.includes('{') ? parseTemplate(trueVal, ctx) : trueVal;
+        // Risolvi ricorsivamente se trueVal contiene espressioni
+        if (trueVal.includes('{')) return parseTemplate(trueVal, ctx);
+        if (trueVal.includes('::')) return evalExpr(trueVal, ctx);
+        return trueVal;
       }
       if (falseVal !== '') {
-        return falseVal.includes('{') ? parseTemplate(falseVal, ctx) : falseVal;
+        if (falseVal.includes('{')) return parseTemplate(falseVal, ctx);
+        if (falseVal.includes('::')) return evalExpr(falseVal, ctx);
+        return falseVal;
       }
       return '';
     }
     
+    // ── MODIFICATORI ──
     if (mod === 'bytes') {
       const b = parseFloat(val);
       if (!b || isNaN(b) || b === 0) return '';
@@ -358,80 +448,71 @@ function evalExpr(expr, ctx) {
       continue;
     }
     
-    if (mod === 'title' || mod === 'upper') {
-      val = String(val ?? '').toUpperCase();
-      continue;
-    }
-    
-    if (mod === 'lower') {
-      val = String(val ?? '').toLowerCase();
-      continue;
-    }
-    
-    if (mod === 'length') {
-      val = Array.isArray(val) ? val.length : String(val ?? '').length;
-      continue;
-    }
-    
-    if (mod === 'first') {
-      val = Array.isArray(val) ? (val[0] ?? '') : (String(val ?? '')[0] ?? '');
-      continue;
-    }
-    
+    // Altri modificatori comuni
+    if (mod === 'title' || mod === 'upper') { val = String(val ?? '').toUpperCase(); continue; }
+    if (mod === 'lower') { val = String(val ?? '').toLowerCase(); continue; }
+    if (mod === 'length') { val = Array.isArray(val) ? val.length : String(val ?? '').length; continue; }
+    if (mod === 'first') { val = Array.isArray(val) ? (val[0] ?? '') : (String(val ?? '')[0] ?? ''); continue; }
     if (mod === 'last') {
-      if (Array.isArray(val)) {
-        val = val[val.length - 1] ?? '';
-      } else {
-        const str = String(val ?? '');
-        val = str[str.length - 1] ?? '';
-      }
+      if (Array.isArray(val)) val = val[val.length-1] ?? '';
+      else { const s = String(val ?? ''); val = s[s.length-1] ?? ''; }
       continue;
     }
-    
     if (mod.startsWith('truncate(')) {
       const m = mod.match(/truncate\((\d+)\)/);
-      if (m) {
-        const n = parseInt(m[1]);
-        const str = String(val ?? '');
-        val = str.length > n ? str.slice(0, n) + '…' : str;
-      }
+      if (m) { const n=parseInt(m[1]); const s=String(val??''); val = s.length>n ? s.slice(0,n)+'…' : s; }
       continue;
     }
-    
     if (mod === 'reverse') {
-      if (Array.isArray(val)) {
-        val = [...val].reverse();
-      } else {
-        val = String(val ?? '').split('').reverse().join('');
-      }
+      if (Array.isArray(val)) val = [...val].reverse();
+      else val = String(val??'').split('').reverse().join('');
       continue;
     }
-    
     if (mod === 'sort') {
-      if (Array.isArray(val)) {
-        val = [...val].sort();
-      } else {
-        val = String(val ?? '').split('').sort().join('');
-      }
+      if (Array.isArray(val)) val = [...val].sort();
+      else val = String(val??'').split('').sort().join('');
+      continue;
+    }
+    if (mod === 'string') { val = String(val ?? ''); continue; }
+    if (mod === 'hex') { val = parseInt(val).toString(16); continue; }
+    if (mod === 'octal') { val = parseInt(val).toString(8); continue; }
+    if (mod === 'binary') { val = parseInt(val).toString(2); continue; }
+    if (mod === 'time') {
+      const s = parseInt(val) || 0;
+      const h = Math.floor(s/3600), m = Math.floor((s%3600)/60), sec = s%60;
+      let t = '';
+      if (h) t += h+'h ';
+      if (m) t += m+'m ';
+      if (sec && !h) t += sec+'s';
+      val = t.trim() || '0s';
+      continue;
+    }
+    if (mod === 'star') {
+      const score = parseInt(val) || 0;
+      const stars = Math.round(score/20);
+      val = '★'.repeat(Math.min(5, stars)) + '☆'.repeat(Math.max(0, 5-stars));
+      continue;
+    }
+    if (mod === 'pstar') {
+      const score = parseInt(val) || 0;
+      const stars = Math.round(score/20);
+      val = '★'.repeat(Math.min(5, stars)) + '☆'.repeat(5 - Math.min(5, stars));
       continue;
     }
   }
-  
   return val != null ? String(val) : '';
 }
 
 function getPath(obj, path) {
   if (!obj) return undefined;
   return path.split('.').reduce((o, k) => {
-    if (o && o[k] !== undefined && o[k] !== null) {
-      return o[k];
-    }
+    if (o && o[k] !== undefined && o[k] !== null) return o[k];
     return undefined;
   }, obj);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// PREVIEW CONTEXT — con supporto per variabili avanzate
+// 3. CONTEXT CON SUPPORTO PER VARIABILI AVANZATE (TUTTE)
 // ═══════════════════════════════════════════════════════════════════════════
 
 function getAdvancedVars() {
@@ -440,18 +521,15 @@ function getAdvancedVars() {
     const key = input.dataset.var;
     let val = input.value.trim();
     if (val === '') return;
-    
-    // Parse array se contiene virgole
+    // Parse array (virgole)
     if (val.includes(',')) {
       val = val.split(',').map(s => s.trim()).filter(Boolean);
     }
-    // Parse boolean
+    // Parse boolean / null / number
     if (val === 'true') val = true;
-    if (val === 'false') val = false;
-    if (val === 'null') val = null;
-    // Parse number
-    if (!isNaN(val) && val !== '' && !val.includes(',')) val = parseFloat(val);
-    
+    else if (val === 'false') val = false;
+    else if (val === 'null') val = null;
+    else if (!isNaN(val) && val !== '' && !val.includes(',')) val = parseFloat(val);
     // Imposta nel path
     const parts = key.split('.');
     let current = vars;
@@ -459,48 +537,91 @@ function getAdvancedVars() {
       if (!current[parts[i]]) current[parts[i]] = {};
       current = current[parts[i]];
     }
-    current[parts[parts.length - 1]] = val;
+    current[parts[parts.length-1]] = val;
   });
   return vars;
 }
 
 function makeCtx(addonName, serviceName) {
   const adv = getAdvancedVars();
-  
-  // Default values
+  // Default completi per tutte le variabili
   const defaults = {
     stream: {
-      title: 'Movie Title',
-      name: '[RD⚡] Torrentio',
-      filename: 'Movie.Title.2023.2160p.BluRay.HEVC.DV.TrueHD.Atmos.7.1.iTA.ENG-GROUP.mkv',
-      folderName: 'Movie.Title.2023.2160p.BluRay.HEVC.DV.TrueHD.Atmos.7.1.iTA.ENG-GROUP',
+      type: 'Debrid',
+      proxied: false,
+      library: false,
+      indexer: 'Torrentio',
+      message: 'This is a message',
+      infoHash: 'abcdef1234567890',
+      filename: 'Movie.2023.2160p.BluRay.HEVC.DV.TrueHD.Atmos.7.1.iTA.ENG-GROUP.mkv',
+      folderName: 'Movie.2023.2160p.BluRay.HEVC.DV.TrueHD.Atmos.7.1.iTA.ENG-GROUP',
+      size: 62500000000,
+      folderSize: 125000000000,
+      bitrate: 54800000,
+      duration: 9120,
+      container: 'mkv',
+      extension: '.mkv',
       quality: 'BluRay',
       resolution: '2160p',
-      encode: 'HEVC',
-      hdr: 'DV',
       visualTags: ['HDR', 'DV', 'BluRay'],
-      audio: 'Atmos',
-      audioChannels: '7.1',
+      encode: 'HEVC',
+      network: 'Netflix',
+      hasChapters: true,
       audioTags: ['Atmos', 'TrueHD', '7.1'],
-      size: 62500000000,
-      seeders: 87,
+      audioChannels: '7.1',
       languages: ['Italian', 'English'],
       languageEmojis: ['🇮🇹', '🇬🇧'],
       languageCodes: ['ita', 'eng'],
       smallLanguageCodes: ['ITA', 'ENG'],
+      uLanguages: ['Italian', 'English'],
+      uLanguageEmojis: ['🇮🇹', '🇬🇧'],
+      uLanguageCodes: ['ita', 'eng'],
+      uSmallLanguageCodes: ['ITA', 'ENG'],
+      dubbed: false,
+      subtitles: ['English', 'French'],
+      subtitleEmojis: ['🇬🇧', '🇫🇷'],
+      subtitleCodes: ['eng', 'fra'],
+      smallSubtitleCodes: ['ENG', 'FRA'],
+      uSubtitles: ['English'],
+      uSubtitleEmojis: ['🇬🇧'],
+      uSubtitleCodes: ['eng'],
+      uSmallSubtitleCodes: ['ENG'],
+      subbed: true,
+      title: 'Movie Title',
       year: '2023',
-      season: -1,
-      episode: -1,
+      date: '2023-12-01',
       releaseGroup: 'GROUP',
-      type: 'Debrid',
-      cached: true,
-      regexMatched: null,
-      duration: 9120,
-      bitrate: 54800000,
-      container: 'mkv',
-      extension: '.mkv',
+      editions: ["Director's Cut", "Extended"],
+      repack: false,
+      regraded: false,
+      uncensored: false,
+      unrated: false,
+      upscaled: false,
+      seasonPack: false,
+      seasons: [1, 2],
+      formattedSeasons: 'S01-S02',
+      folderSeasons: [1],
+      formattedFolderSeasons: 'S01',
+      episodes: [1, 2, 3],
+      formattedEpisodes: 'E01-E03',
+      folderEpisodes: [1],
+      formattedFolderEpisodes: 'E01',
+      seasonEpisode: ['S01E01', 'S01E02'],
+      seeders: 87,
+      private: false,
+      freeleech: false,
       age: '10d',
       ageHours: 240,
+      seadex: false,
+      seadexBest: false,
+      regexMatched: 'Bluray T1',
+      rankedRegexMatched: ['Bluray T1', 'Web T2'],
+      regexScore: 95,
+      nRegexScore: 85,
+      seScore: 90,
+      nSeScore: 80,
+      seMatched: 'Best Release',
+      rseMatched: ['Rule A', 'Rule B'],
       serviceName: serviceName || 'Real-Debrid',
     },
     service: {
@@ -521,7 +642,7 @@ function makeCtx(addonName, serviceName) {
       queryType: 'movie',
       title: 'Movie Title',
       runtime: 152,
-      episodeRuntime: 0,
+      episodeRuntime: 45,
       genres: ['Action', 'Sci-Fi'],
       year: 2023,
     },
@@ -532,9 +653,8 @@ function makeCtx(addonName, serviceName) {
     tools: {
       newLine: '\n',
       removeLine: '',
-    },
+    }
   };
-  
   // Merge profondo
   function deepMerge(target, source) {
     for (const key in source) {
@@ -547,13 +667,47 @@ function makeCtx(addonName, serviceName) {
     }
     return target;
   }
-  
   return deepMerge(deepMerge({}, defaults), adv);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// SNIPPETS & VARIABLES
+// 4. GENERAZIONE UI PER LE VARIABILI AVANZATE
 // ═══════════════════════════════════════════════════════════════════════════
+function buildAdvancedUI() {
+  const container = document.getElementById('adv-container');
+  container.innerHTML = '';
+  for (const [category, fields] of Object.entries(VARIABLE_SCHEMA)) {
+    const catDiv = document.createElement('div');
+    catDiv.className = 'adv-cat';
+    const title = document.createElement('div');
+    title.className = 'adv-cat-title';
+    title.textContent = category;
+    catDiv.appendChild(title);
+    const grid = document.createElement('div');
+    grid.className = 'adv-grid';
+    fields.forEach(f => {
+      const field = document.createElement('div');
+      field.className = 'adv-field';
+      const label = document.createElement('label');
+      label.textContent = f.path;
+      const input = document.createElement('input');
+      input.className = 'adv-input';
+      input.dataset.var = f.path;
+      input.placeholder = f.placeholder || '';
+      input.oninput = updateAllPreviews;
+      field.appendChild(label);
+      field.appendChild(input);
+      grid.appendChild(field);
+    });
+    catDiv.appendChild(grid);
+    container.appendChild(catDiv);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 5. SNIPPETS, STATO, LOGIN, UI HELPERS (come prima, ma con updateAllPreviews)
+// ═══════════════════════════════════════════════════════════════════════════
+
 const SNIP_N = [
   {l:'{stream.quality}',v:'{stream.quality}'},
   {l:'{stream.quality} | {service.name}',v:'{stream.quality} | {service.name}'},
@@ -575,50 +729,18 @@ const SNIP_D = [
   {l:'{stream.releaseGroup}',v:'{stream.releaseGroup}'},
 ];
 const VARS = [
-  ['{stream.title}','Titolo del film/serie'],
-  ['{stream.filename}','Nome file completo'],
-  ['{stream.folderName}','Nome cartella'],
-  ['{stream.quality}','Qualità (BluRay, WEB-DL…)'],
-  ['{stream.resolution}','Risoluzione (1080p, 2160p…)'],
-  ['{stream.encode}','Codec (HEVC, x264…)'],
-  ['{stream.hdr}','HDR tag (DV, HDR10…)'],
-  ['{stream.visualTags}','Tag visivi (HDR, DV…)'],
-  ['{stream.audio}','Audio (Atmos, TrueHD…)'],
-  ['{stream.audioChannels}','Canali (5.1, 7.1…)'],
-  ['{stream.audioTags}','Lista audio tags'],
-  ['{stream.size::bytes}','File size (62.5 GB)'],
-  ['{stream.folderSize}','Folder size (125 GB)'],
-  ['{stream.seeders}','Seeders'],
-  ['{stream.languages}','Lingue (Italian, English…)'],
-  ['{stream.languageEmojis}','Flag emoji 🇮🇹 🇬🇧'],
-  ['{stream.type}','Tipo (Debrid/Torrent/HTTP)'],
-  ['{stream.cached}','true se in cache'],
-  ['{stream.regexMatched}','Regex badge / null'],
-  ['{stream.year}','Anno'],
-  ['{stream.season}','Stagione (>0 se serie)'],
-  ['{stream.episode}','Episodio (>0 se serie)'],
-  ['{stream.releaseGroup}','Release group'],
-  ['{stream.duration}','Durata in secondi'],
-  ['{stream.bitrate}','Bitrate in bps'],
-  ['{stream.container}','Container (mkv, mp4…)'],
-  ['{stream.extension}','Estensione (.mkv…)'],
-  ['{stream.age}','Età (10d)'],
-  ['{service.id}','ID servizio (realdebrid)'],
-  ['{service.shortName}','Sigla (RD)'],
-  ['{service.name}','Nome servizio (Real-Debrid)'],
-  ['{addon.presetId}','ID preset addon'],
-  ['{addon.name}','Nome addon'],
+  ['{stream.title}','Titolo'], ['{stream.filename}','Nome file'], ['{stream.quality}','Qualità'],
+  ['{stream.resolution}','Risoluzione'], ['{stream.encode}','Codec'], ['{stream.hdr}','HDR'],
+  ['{stream.visualTags}','Tag visivi'], ['{stream.audio}','Audio'], ['{stream.audioChannels}','Canali'],
+  ['{stream.audioTags}','Tag audio'], ['{stream.size::bytes}','Dimensione'], ['{stream.seeders}','Seeders'],
+  ['{stream.languages}','Lingue'], ['{stream.languageEmojis}','Emoji'], ['{stream.year}','Anno'],
+  ['{stream.season}','Stagione'], ['{stream.episode}','Episodio'], ['{stream.releaseGroup}','Gruppo'],
+  ['{service.name}','Servizio'], ['{service.shortName}','Sigla'], ['{addon.name}','Addon'],
 ];
 
-// ═══════════════════════════════════════════════════════════════════════════
-// STATE
-// ═══════════════════════════════════════════════════════════════════════════
 let prov='stremio', token=null, addons=[], config=null;
 try{ token=localStorage.getItem('fm_token'); prov=localStorage.getItem('fm_prov')||'stremio'; }catch(_){}
 
-// ═══════════════════════════════════════════════════════════════════════════
-// UI HELPERS
-// ═══════════════════════════════════════════════════════════════════════════
 function switchProv(p){
   prov=p; try{localStorage.setItem('fm_prov',p)}catch(_){}
   document.getElementById('login-panel').setAttribute('data-prov',p);
@@ -633,9 +755,6 @@ function toast(m,type='ok'){
   setTimeout(()=>el.classList.remove('show'),2600);
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
-// LOGIN
-// ═══════════════════════════════════════════════════════════════════════════
 async function doLogin(){
   clearErr();
   const email=document.getElementById('email').value.trim();
@@ -657,17 +776,11 @@ async function doLogin(){
   finally{btn.disabled=false;btn.textContent=`Log in with ${prov==='nuvio'?'Nuvio':'Stremio'}`}
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
-// UPDATE ALL PREVIEWS
-// ═══════════════════════════════════════════════════════════════════════════
 function updateAllPreviews(){
   updateGlobalPreview();
   addons.filter(a=>a.isProxiable).forEach(a=>updateAddonPreview(a.id));
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
-// LOAD CONFIG SCREEN
-// ═══════════════════════════════════════════════════════════════════════════
 async function loadConfigScreen(){
   try{const r=await fetch('/api/config',{headers:{Authorization:'Bearer '+token}});if(r.ok)config=(await r.json()).config}catch(_){}
   try{const r=await fetch('/api/addons',{headers:{Authorization:'Bearer '+token}});if(r.ok)addons=(await r.json()).addons||[]}catch(_){}
@@ -694,16 +807,11 @@ async function loadConfigScreen(){
   fillSnippets('gsnip-name',SNIP_N,'global-name',()=>updateGlobalPreview());
   fillSnippets('gsnip-desc',SNIP_D,'global-desc',()=>updateGlobalPreview());
   updateGlobalPreview();
-
   renderAddonList();
-
   document.getElementById('login-panel').style.display='none';
   document.getElementById('config-panel').style.display='block';
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
-// GLOBAL TEMPLATE
-// ═══════════════════════════════════════════════════════════════════════════
 function onGlobalChange(){
   updateGlobalPreview();
   addons.filter(a=>a.isProxiable).forEach(a=>updateAddonPreview(a.id));
@@ -728,28 +836,18 @@ function effectiveDesc(addonId){
   return perAddon||global;
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
-// ADDON LIST
-// ═══════════════════════════════════════════════════════════════════════════
-function renderAddonList(){
+function renderAddonList(){ /* stesso di prima */ 
   const container=document.getElementById('addon-list');
   const proxiable=addons.filter(a=>a.isProxiable);
-  if(!proxiable.length){
-    container.innerHTML='<p style="font-size:.78rem;color:var(--muted)">No proxiable addons found. Try syncing your account.</p>';
-    return;
-  }
+  if(!proxiable.length){ container.innerHTML='<p style="font-size:.78rem;color:var(--muted)">No proxiable addons found.</p>'; return; }
   container.innerHTML='';
-
   proxiable.forEach(addon=>{
     const saved=config?.addonConfigs?.find(c=>c.addonId===addon.id)||{};
     const nameVal=saved.titleTemplate||'';
     const descVal=saved.descriptionTemplate||'';
     const enabled=saved.enabled!==false;
     const initials=(addon.name||'?').replace(/[^A-Za-z0-9]/g,'').slice(0,3).toUpperCase();
-    const logoHtml=addon.logo
-      ?`<img class="addon-logo" src="${addon.logo}" alt="" onerror="this.outerHTML='<div class=addon-logo-fb>${initials}</div>'">`
-      :`<div class="addon-logo-fb">${initials}</div>`;
-
+    const logoHtml=addon.logo ? `<img class="addon-logo" src="${addon.logo}" alt="" onerror="this.outerHTML='<div class=addon-logo-fb>${initials}</div>'">` : `<div class="addon-logo-fb">${initials}</div>`;
     const card=document.createElement('div');
     card.className='addon-card';card.id=`card-${addon.id}`;
     card.innerHTML=`
@@ -761,97 +859,37 @@ function renderAddonList(){
       </div>
       <div class="addon-body">
         <div class="toggle-row">
-          <div class="track ${enabled?'on':''}" id="tog-${addon.id}" onclick="flipTog('${addon.id}')">
-            <div class="thumb"></div>
-          </div>
+          <div class="track ${enabled?'on':''}" id="tog-${addon.id}" onclick="flipTog('${addon.id}')"><div class="thumb"></div></div>
           <span class="toggle-lbl" id="tog-lbl-${addon.id}">${enabled?'Enabled':'Disabled'}</span>
-          <span style="margin-left:auto;font-size:.66rem;color:var(--dim)">Leave templates empty to use Global</span>
+          <span style="margin-left:auto;font-size:.66rem;color:var(--dim)">Leave empty → use Global</span>
         </div>
         <div class="tmpl-grid">
-          <div>
-            <div class="tmpl-col-label">Name template <span>(overrides global)</span></div>
-            <textarea class="tmpl" id="name-${addon.id}" oninput="updateAddonPreview('${addon.id}')"
-              placeholder="Leave empty → use Global">${nameVal}</textarea>
-          </div>
-          <div>
-            <div class="tmpl-col-label">Description template <span>(overrides global)</span></div>
-            <textarea class="tmpl" id="desc-${addon.id}" oninput="updateAddonPreview('${addon.id}')"
-              placeholder="Leave empty → use Global">${descVal}</textarea>
-          </div>
+          <div><div class="tmpl-col-label">Name template <span>(overrides global)</span></div>
+            <textarea class="tmpl" id="name-${addon.id}" oninput="updateAddonPreview('${addon.id}')" placeholder="Leave empty → use Global">${nameVal}</textarea></div>
+          <div><div class="tmpl-col-label">Description template <span>(overrides global)</span></div>
+            <textarea class="tmpl" id="desc-${addon.id}" oninput="updateAddonPreview('${addon.id}')" placeholder="Leave empty → use Global">${descVal}</textarea></div>
         </div>
-        <div class="snip-section">
-          <div class="snip-label">Name snippets</div>
-          <div class="snip-row" id="sn-${addon.id}-name"></div>
-        </div>
-        <div class="snip-section" style="margin-top:5px">
-          <div class="snip-label">Description snippets</div>
-          <div class="snip-row" id="sn-${addon.id}-desc"></div>
-        </div>
-        <div class="vars-toggle" onclick="toggleVars('${addon.id}')">
-          <span id="varr-${addon.id}">▶</span> Available variables
-        </div>
-        <div class="vars-panel" id="vars-${addon.id}">
-          <div class="vars-grid" id="vg-${addon.id}"></div>
-        </div>
-        <div class="preview-section">
-          <div class="preview-lbl">Preview <span style="font-size:.6rem;color:var(--dim)">(shows effective template)</span></div>
-          <div class="preview-box">
-            <div class="prev-name" id="pn-${addon.id}">—</div>
-            <div class="prev-desc" id="pd-${addon.id}">—</div>
-          </div>
-        </div>
-        <div class="upload-row">
-          <label class="upload-lbl" for="file-${addon.id}">📁 Upload .json badges</label>
-          <input type="file" class="file-input" id="file-${addon.id}" accept=".json" onchange="handleJson(event,'${addon.id}')">
-          <span class="upload-status" id="fst-${addon.id}">No file chosen</span>
-        </div>
+        <div class="snip-section"><div class="snip-label">Name snippets</div><div class="snip-row" id="sn-${addon.id}-name"></div></div>
+        <div class="snip-section" style="margin-top:5px"><div class="snip-label">Description snippets</div><div class="snip-row" id="sn-${addon.id}-desc"></div></div>
+        <div class="vars-toggle" onclick="toggleVars('${addon.id}')"><span id="varr-${addon.id}">▶</span> Available variables</div>
+        <div class="vars-panel" id="vars-${addon.id}"><div class="vars-grid" id="vg-${addon.id}"></div></div>
+        <div class="preview-section"><div class="preview-lbl">Preview</div><div class="preview-box"><div class="prev-name" id="pn-${addon.id}">—</div><div class="prev-desc" id="pd-${addon.id}">—</div></div></div>
+        <div class="upload-row"><label class="upload-lbl" for="file-${addon.id}">📁 Upload .json badges</label><input type="file" class="file-input" id="file-${addon.id}" accept=".json" onchange="handleJson(event,'${addon.id}')"><span class="upload-status" id="fst-${addon.id}">No file chosen</span></div>
       </div>`;
     container.appendChild(card);
-
     fillSnippets(`sn-${addon.id}-name`,SNIP_N,`name-${addon.id}`,()=>updateAddonPreview(addon.id));
     fillSnippets(`sn-${addon.id}-desc`,SNIP_D,`desc-${addon.id}`,()=>updateAddonPreview(addon.id));
-
     const vg=document.getElementById(`vg-${addon.id}`);
-    VARS.forEach(([k,v])=>{
-      const el=document.createElement('div');el.className='var-row';
-      el.innerHTML=`<span class="var-k">${k}</span> <span class="var-v">${v}</span>`;
-      vg.appendChild(el);
-    });
-
+    VARS.forEach(([k,v])=>{ const el=document.createElement('div');el.className='var-row';el.innerHTML=`<span class="var-k">${k}</span> <span class="var-v">${v}</span>`; vg.appendChild(el); });
     updateAddonPreview(addon.id);
   });
 }
 
-function toggleCard(id){
-  const c=document.getElementById(`card-${id}`);c.classList.toggle('open');
-}
-function flipTog(id){
-  const t=document.getElementById(`tog-${id}`);t.classList.toggle('on');
-  const on=t.classList.contains('on');
-  document.getElementById(`tog-lbl-${id}`).textContent=on?'Enabled':'Disabled';
-  document.getElementById(`ameta-${id}`).textContent=on?'enabled':'disabled';
-}
-function toggleVars(id){
-  const p=document.getElementById(`vars-${id}`);p.classList.toggle('open');
-  document.getElementById(`varr-${id}`).textContent=p.classList.contains('open')?'▼':'▶';
-}
-
-function fillSnippets(cid,snippets,tid,cb){
-  const c=document.getElementById(cid);if(!c)return;
-  snippets.forEach(s=>{
-    const el=document.createElement('span');el.className='snip';el.textContent=s.l;
-    el.onclick=()=>{insertSnippet(tid,s.v);if(cb)cb()};
-    c.appendChild(el);
-  });
-}
-function insertSnippet(tid,val){
-  const el=document.getElementById(tid);if(!el)return;
-  const s=el.selectionStart,e2=el.selectionEnd;
-  el.value=el.value.slice(0,s)+val+el.value.slice(e2);
-  el.selectionStart=el.selectionEnd=s+val.length;
-  el.focus();el.dispatchEvent(new Event('input'));
-}
-
+function toggleCard(id){ document.getElementById(`card-${id}`).classList.toggle('open'); }
+function flipTog(id){ const t=document.getElementById(`tog-${id}`); t.classList.toggle('on'); const on=t.classList.contains('on'); document.getElementById(`tog-lbl-${id}`).textContent=on?'Enabled':'Disabled'; document.getElementById(`ameta-${id}`).textContent=on?'enabled':'disabled'; }
+function toggleVars(id){ const p=document.getElementById(`vars-${id}`); p.classList.toggle('open'); document.getElementById(`varr-${id}`).textContent=p.classList.contains('open')?'▼':'▶'; }
+function fillSnippets(cid,snippets,tid,cb){ const c=document.getElementById(cid); if(!c)return; snippets.forEach(s=>{ const el=document.createElement('span');el.className='snip';el.textContent=s.l; el.onclick=()=>{insertSnippet(tid,s.v); if(cb)cb()}; c.appendChild(el); }); }
+function insertSnippet(tid,val){ const el=document.getElementById(tid); if(!el)return; const s=el.selectionStart,e2=el.selectionEnd; el.value=el.value.slice(0,s)+val+el.value.slice(e2); el.selectionStart=el.selectionEnd=s+val.length; el.focus(); el.dispatchEvent(new Event('input')); }
 function updateAddonPreview(addonId){
   const addon=addons.find(a=>a.id===addonId);
   const ctx=makeCtx(addon?.name,addon?.name);
@@ -859,112 +897,15 @@ function updateAddonPreview(addonId){
   document.getElementById(`pn-${addonId}`).textContent=parseTemplate(effectiveName(addonId),ctx)||'—';
   document.getElementById(`pd-${addonId}`).textContent=parseTemplate(effectiveDesc(addonId),ctx)||'—';
 }
+function handleJson(event,addonId){ /* come prima */ const file=event.target.files[0]; if(!file)return; const reader=new FileReader(); reader.onload=e=>{ try{ const parsed=JSON.parse(e.target.result); document.getElementById(`file-${addonId}`).setAttribute('data-json',e.target.result); document.getElementById(`fst-${addonId}`).textContent='✓ '+file.name; document.getElementById(`fst-${addonId}`).style.color='var(--green)'; const badges=Array.isArray(parsed.badges)?parsed.badges:Array.isArray(parsed)?parsed:[]; if(badges.length){ const info=document.createElement('div'); info.style.cssText='font-size:.68rem;color:var(--green);margin-top:5px'; info.textContent=`✓ ${badges.length} badge rules loaded`; const existingInfo=document.getElementById(`badge-info-${addonId}`); if(existingInfo) existingInfo.remove(); info.id=`badge-info-${addonId}`; document.getElementById(`fst-${addonId}`).after(info); } }catch(_){ document.getElementById(`fst-${addonId}`).textContent='✗ Invalid JSON'; document.getElementById(`fst-${addonId}`).style.color='var(--red)'; } }; reader.readAsText(file); }
 
-function handleJson(event,addonId){
-  const file=event.target.files[0];if(!file)return;
-  const reader=new FileReader();
-  reader.onload=e=>{
-    try{
-      const parsed=JSON.parse(e.target.result);
-      document.getElementById(`file-${addonId}`).setAttribute('data-json',e.target.result);
-      document.getElementById(`fst-${addonId}`).textContent='✓ '+file.name;
-      document.getElementById(`fst-${addonId}`).style.color='var(--green)';
-      const badges=Array.isArray(parsed.badges)?parsed.badges:Array.isArray(parsed)?parsed:[];
-      if(badges.length){
-        const info=document.createElement('div');
-        info.style.cssText='font-size:.68rem;color:var(--green);margin-top:5px';
-        info.textContent=`✓ ${badges.length} badge rules loaded`;
-        const existingInfo=document.getElementById(`badge-info-${addonId}`);
-        if(existingInfo) existingInfo.remove();
-        info.id=`badge-info-${addonId}`;
-        document.getElementById(`fst-${addonId}`).after(info);
-      }
-    }catch(_){
-      document.getElementById(`fst-${addonId}`).textContent='✗ Invalid JSON';
-      document.getElementById(`fst-${addonId}`).style.color='var(--red)';
-    }
-  };
-  reader.readAsText(file);
-}
+async function saveConfig(){ /* come prima */ const btn=document.getElementById('save-btn'); btn.disabled=true; btn.innerHTML='<span class="sp"></span> Saving…'; const globalName=document.getElementById('global-name').value||null; const globalDesc=document.getElementById('global-desc').value||null; const addonConfigs=addons.filter(a=>a.isProxiable).map(addon=>{ const tog=document.getElementById(`tog-${addon.id}`); const enabled=tog?tog.classList.contains('on'):true; const perName=document.getElementById(`name-${addon.id}`)?.value||null; const perDesc=document.getElementById(`desc-${addon.id}`)?.value||null; const finalName=perName||globalName; const finalDesc=perDesc||globalDesc; const jsonEl=document.getElementById(`file-${addon.id}`); const jsonStr=jsonEl?.getAttribute('data-json'); let badges=[]; if(jsonStr){try{const p=JSON.parse(jsonStr); badges=Array.isArray(p.badges)?p.badges:Array.isArray(p)?p:[];}catch(_){}} return { addonId:addon.id, slug:addon.slug||addon.id.toLowerCase(), name:addon.name, transportUrl:addon.transportUrl||'https://localhost', enabled, idPrefixes:addon.idPrefixes||[], types:addon.types||['movie','series'], logo:addon.logo||null, nameTemplate:null, titleTemplate:finalName, descriptionTemplate:finalDesc, badges }; }); const payload={ globalBadges:config?.globalBadges||[], addonConfigs, settings:config?.settings||{mergeStreams:false}, globalTemplate:{titleTemplate:globalName,descriptionTemplate:globalDesc} }; try{ const res=await fetch('/api/config',{method:'PUT',headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},body:JSON.stringify(payload)}); const data=await res.json(); if(res.ok&&data.success){toast('Configuration saved!'); config=payload} else {toast(data.error||'Validation error','err'); console.error(data.details)} }catch(_){toast('Network error','err')} finally{btn.disabled=false; btn.textContent='⚡ Save & Update'} }
+function copyUrl(){ const url=document.getElementById('url-text').textContent; if(!url||url==='—')return; navigator.clipboard.writeText(url).then(()=>toast('URL copied!')); }
+function doLogout(){ try{localStorage.removeItem('fm_token'); localStorage.removeItem('fm_prov')}catch(_){} token=null; config=null; addons=[]; document.getElementById('login-panel').style.display='block'; document.getElementById('config-panel').style.display='none'; document.getElementById('email').value=''; document.getElementById('password').value=''; document.getElementById('addon-list').innerHTML='<p style="font-size:.8rem;color:var(--muted)">Loading addons…</p>'; document.getElementById('global-name').value=''; document.getElementById('global-desc').value=''; switchProv('stremio'); }
 
-// ═══════════════════════════════════════════════════════════════════════════
-// SAVE
-// ═══════════════════════════════════════════════════════════════════════════
-async function saveConfig(){
-  const btn=document.getElementById('save-btn');
-  btn.disabled=true;btn.innerHTML='<span class="sp"></span> Saving…';
+async function boot(){ switchProv(prov); if(token){ const r=await fetch('/api/me',{headers:{Authorization:'Bearer '+token}}); if(r.ok) await loadConfigScreen(); else try{localStorage.removeItem('fm_token')}catch(_){} } }
 
-  const globalName=document.getElementById('global-name').value||null;
-  const globalDesc=document.getElementById('global-desc').value||null;
-
-  const addonConfigs=addons.filter(a=>a.isProxiable).map(addon=>{
-    const tog=document.getElementById(`tog-${addon.id}`);
-    const enabled=tog?tog.classList.contains('on'):true;
-    const perName=document.getElementById(`name-${addon.id}`)?.value||null;
-    const perDesc=document.getElementById(`desc-${addon.id}`)?.value||null;
-    const finalName=perName||globalName;
-    const finalDesc=perDesc||globalDesc;
-    const jsonEl=document.getElementById(`file-${addon.id}`);
-    const jsonStr=jsonEl?.getAttribute('data-json');
-    let badges=[];
-    if(jsonStr){try{const p=JSON.parse(jsonStr);badges=Array.isArray(p.badges)?p.badges:Array.isArray(p)?p:[];}catch(_){}}
-    return{
-      addonId:addon.id,slug:addon.slug||addon.id.toLowerCase(),
-      name:addon.name,transportUrl:addon.transportUrl||'https://localhost',
-      enabled,idPrefixes:addon.idPrefixes||[],types:addon.types||['movie','series'],
-      logo:addon.logo||null,nameTemplate:null,
-      titleTemplate:finalName,
-      descriptionTemplate:finalDesc,
-      badges,
-    };
-  });
-
-  const payload={
-    globalBadges:config?.globalBadges||[],
-    addonConfigs,
-    settings:config?.settings||{mergeStreams:false},
-    globalTemplate:{titleTemplate:globalName,descriptionTemplate:globalDesc},
-  };
-
-  try{
-    const res=await fetch('/api/config',{
-      method:'PUT',headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},
-      body:JSON.stringify(payload),
-    });
-    const data=await res.json();
-    if(res.ok&&data.success){toast('Configuration saved!');config=payload}
-    else{toast(data.error||'Validation error','err');console.error(data.details)}
-  }catch(_){toast('Network error','err')}
-  finally{btn.disabled=false;btn.textContent='⚡ Save & Update'}
-}
-
-function copyUrl(){
-  const url=document.getElementById('url-text').textContent;
-  if(!url||url==='—')return;
-  navigator.clipboard.writeText(url).then(()=>toast('URL copied!'));
-}
-function doLogout(){
-  try{localStorage.removeItem('fm_token');localStorage.removeItem('fm_prov')}catch(_){}
-  token=null;config=null;addons=[];
-  document.getElementById('login-panel').style.display='block';
-  document.getElementById('config-panel').style.display='none';
-  document.getElementById('email').value='';
-  document.getElementById('password').value='';
-  document.getElementById('addon-list').innerHTML='<p style="font-size:.8rem;color:var(--muted)">Loading addons…</p>';
-  document.getElementById('global-name').value='';
-  document.getElementById('global-desc').value='';
-  switchProv('stremio');
-}
-
-async function boot(){
-  switchProv(prov);
-  if(token){
-    const r=await fetch('/api/me',{headers:{Authorization:'Bearer '+token}});
-    if(r.ok) await loadConfigScreen();
-    else try{localStorage.removeItem('fm_token')}catch(_){}
-  }
-}
-document.readyState==='loading'?document.addEventListener('DOMContentLoaded',boot):boot();
+document.readyState==='loading'?document.addEventListener('DOMContentLoaded',()=>{ buildAdvancedUI(); boot(); }) : (()=>{ buildAdvancedUI(); boot(); })();
 </script>
 </body>
 </html>
