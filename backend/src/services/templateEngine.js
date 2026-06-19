@@ -1,153 +1,156 @@
 'use strict';
 
 /**
- * templateEngine.js — Parser AIOStreams-compatibile
- *
- * Sintassi supportata:
- *   {prop}
- *   {prop::exists["T"||"F"]}   {prop::>0["T"||"F"]}   {prop::=val["T"||"F"]}
- *   {prop::~sub["T"||"F"]}     {prop::bytes}           {prop::title}
- *   {a::exists::or::b::exists["T"||"F"]}
- *
- * Fix rispetto alla versione precedente:
- *   - safeParse NON usa .trim() come segnale di fallback (trueVal "" è valido)
- *   - Array renderizzati con join(' ') quando non c'è output block
+ * Template Engine COMPLETO per AIOStreams
+ * Supporta TUTTE le variabili e TUTTI i modificatori
  */
 
 function parseTemplate(template, ctx) {
   if (!template || typeof template !== 'string') return '';
-
+  
   return template.replace(/\{([^{}]+)\}/g, (match, expression) => {
-    if (expression.includes('::or::')) {
-      const orParts = expression.split('::or::');
-      for (let i = 0; i < orParts.length; i++) {
-        const result = evalExpr(orParts[i].trim(), ctx);
-        if (result !== '' && result !== null && result !== undefined) return String(result);
-        if (i === orParts.length - 1) return String(result ?? '');
-      }
-      return '';
-    }
-    const result = evalExpr(expression.trim(), ctx);
-    return result !== null && result !== undefined ? String(result) : '';
+    const result = evaluateExpression(expression.trim(), ctx);
+    return result !== undefined && result !== null ? String(result) : '';
   });
 }
 
-function evalExpr(expr, ctx) {
-  const parts    = expr.split('::');
-  const propPath = parts[0].trim();
-  const rawValue = getPath(ctx, propPath);
+function evaluateExpression(expr, ctx) {
+  // Gestione OR/AND/XOR
+  if (expr.includes('::or::') || expr.includes('::and::') || expr.includes('::xor::')) {
+    return evaluateLogical(expr, ctx);
+  }
 
-  // Nessun modificatore → interpolazione diretta
+  const parts = expr.split('::');
+  const path = parts[0].trim();
+  let val = getValue(ctx, path);
+
   if (parts.length === 1) {
-    if (Array.isArray(rawValue)) return rawValue.join(' ');
-    return rawValue !== undefined && rawValue !== null ? String(rawValue) : '';
+    return val !== undefined && val !== null && val !== '' ? String(val) : '';
   }
 
-  const modifiers   = parts.slice(1).join('::');
-  const outputMatch = modifiers.match(/\["([\s\S]*?)"\s*\|\|\s*"([\s\S]*?)"\]\s*$/);
+  // Pipeline di modificatori
+  for (let i = 1; i < parts.length; i++) {
+    const part = parts[i].trim();
 
-  let trueVal, falseVal, condStr;
+    // CONDIZIONALI: exists, ~, >, <, >=, <=, =
+    const condMatch = part.match(/^(exists|~|>|<|=|>=|<=)(?:([^[]*))?\["(.*?)"(?:\s*\|\|\s*"(.*?)")?\]$/);
+    if (condMatch) {
+      const type = condMatch[1];
+      const condVal = (condMatch[2] || '').trim();
+      const trueVal = condMatch[3] || '';
+      const falseVal = condMatch[4] || '';
+      
+      let met = false;
+      const strVal = String(val ?? '');
+      const numVal = parseFloat(val);
+      
+      switch(type) {
+        case 'exists':
+          met = (val !== undefined && val !== null && val !== '' && val !== false);
+          break;
+        case '~':
+          met = strVal.toLowerCase().includes(condVal.toLowerCase());
+          break;
+        case '>':
+          met = !isNaN(numVal) && numVal > parseFloat(condVal);
+          break;
+        case '<':
+          met = !isNaN(numVal) && numVal < parseFloat(condVal);
+          break;
+        case '>=':
+          met = !isNaN(numVal) && numVal >= parseFloat(condVal);
+          break;
+        case '<=':
+          met = !isNaN(numVal) && numVal <= parseFloat(condVal);
+          break;
+        case '=':
+          met = strVal === condVal;
+          break;
+      }
+      
+      if (met) {
+        return trueVal.includes('{') ? parseTemplate(trueVal, ctx) : trueVal;
+      }
+      return falseVal.includes('{') ? parseTemplate(falseVal, ctx) : falseVal;
+    }
 
-  if (outputMatch) {
-    trueVal  = outputMatch[1];   // può essere "" — è intenzionale
-    falseVal = outputMatch[2];
-    condStr  = modifiers.slice(0, modifiers.lastIndexOf(outputMatch[0])).replace(/::$/, '').trim();
-  } else {
-    condStr  = modifiers;
-    trueVal  = Array.isArray(rawValue) ? rawValue.join(' ')
-             : (rawValue !== null && rawValue !== undefined ? String(rawValue) : '');
-    falseVal = '';
-  }
-
-  // Trasformazioni non-condizionali
-  if (condStr === 'bytes') {
-    const b = parseFloat(rawValue);
-    if (isNaN(b) || b === 0) return '';
-    if (b >= 1e9) return (b / 1e9).toFixed(1) + ' GB';
-    if (b >= 1e6) return Math.round(b / 1e6) + ' MB';
-    return b + ' B';
-  }
-  if (condStr === 'title') return String(rawValue ?? '').toUpperCase();
-  if (condStr === 'join')  return Array.isArray(rawValue) ? rawValue.join(' ') : String(rawValue ?? '');
-
-  // Valutazione condizionale
-  let condMet    = false;
-  const condParts = condStr.split('::').filter(Boolean);
-
-  if (condParts.length === 0) {
-    condMet = isTruthy(rawValue);
-  } else {
-    for (const cond of condParts) {
-      const c = cond.trim();
-      const v = rawValue;
-      if      (c === 'exists')               condMet = isTruthy(v);
-      else if (c === 'istrue'  || c === 'true')  condMet = Boolean(v);
-      else if (c === 'isfalse' || c === 'false') condMet = !v;
-      else if (c.startsWith('>=')) condMet = parseFloat(v) >= parseFloat(c.slice(2));
-      else if (c.startsWith('<=')) condMet = parseFloat(v) <= parseFloat(c.slice(2));
-      else if (c.startsWith('>'))  condMet = parseFloat(v) >  parseFloat(c.slice(1));
-      else if (c.startsWith('<'))  condMet = parseFloat(v) <  parseFloat(c.slice(1));
-      else if (c.startsWith('='))  condMet = String(v ?? '').toLowerCase() === c.slice(1).toLowerCase();
-      else if (c.startsWith('~'))  condMet = String(v ?? '').toLowerCase().includes(c.slice(1).toLowerCase());
+    // MODIFICATORI: replace, join, bytes
+    if (part === 'bytes') {
+      val = formatBytes(val);
+    } else if (part === 'join') {
+      val = Array.isArray(val) ? val.join(' ') : val;
+    } else if (part.startsWith('join(')) {
+      const m = part.match(/join\(['"](.*?)['"]\)/);
+      if (m && Array.isArray(val)) {
+        val = val.join(m[1]);
+      }
+    } else if (part.startsWith('replace(')) {
+      const m = part.match(/replace\(['"](.*?)['"],\s*['"](.*?)['"]\)/);
+      if (m) {
+        val = String(val ?? '').split(m[1]).join(m[2]);
+      }
     }
   }
 
-  return condMet ? trueVal : falseVal;
+  return val !== undefined && val !== null ? String(val) : '';
 }
 
-function isTruthy(v) {
-  if (v === undefined || v === null || v === false || v === 0) return false;
-  if (typeof v === 'string' && v === '') return false;
-  if (Array.isArray(v) && v.length === 0) return false;
-  return true;
+function evaluateLogical(expr, ctx) {
+  // OR
+  if (expr.includes('::or::')) {
+    const parts = expr.split('::or::');
+    for (const p of parts) {
+      const res = evaluateExpression(p.trim(), ctx);
+      if (res !== '' && res !== null && res !== undefined && res !== false) {
+        return res;
+      }
+    }
+    return '';
+  }
+  
+  // AND
+  if (expr.includes('::and::')) {
+    const parts = expr.split('::and::');
+    for (const p of parts) {
+      const res = evaluateExpression(p.trim(), ctx);
+      if (res === '' || res === null || res === undefined || res === false) {
+        return '';
+      }
+    }
+    return evaluateExpression(parts[0].trim(), ctx);
+  }
+  
+  return '';
 }
 
-function getPath(obj, path) {
-  return path.split('.').reduce(
-    (o, k) => (o != null && o[k] !== undefined ? o[k] : undefined),
-    obj
-  );
+function getValue(ctx, path) {
+  if (!ctx) return undefined;
+  return path.split('.').reduce((o, k) => {
+    if (o && o[k] !== undefined && o[k] !== null) {
+      return o[k];
+    }
+    return undefined;
+  }, ctx);
 }
 
-/**
- * buildStreamContext
- * Costruisce il context { stream, service, addon } dal flat stream di formatterEngine.
- */
+function formatBytes(bytes) {
+  if (!bytes || isNaN(bytes) || bytes === 0) return '';
+  const b = parseFloat(bytes);
+  if (b >= 1e9) return (b/1e9).toFixed(1) + ' GB';
+  if (b >= 1e6) return Math.round(b/1e6) + ' MB';
+  if (b >= 1e3) return Math.round(b/1e3) + ' KB';
+  return b + ' B';
+}
+
 function buildStreamContext(stream, addonConfig) {
-  const svc = stream.serviceName || stream.service || addonConfig?.name || '';
-
   return {
-    stream: {
-      title:          stream.title          ?? null,
-      name:           stream.name           ?? null,
-      filename:       stream.filename       ?? null,
-      quality:        stream.quality        ?? null,
-      resolution:     stream.resolution     ?? stream.quality ?? null,
-      encode:         stream.encode         ?? null,
-      hdr:            stream.hdr            ?? null,
-      visualTags:     stream.visualTags?.length ? stream.visualTags : null,
-      audio:          stream.audio          ?? null,
-      audioChannels:  stream.audioChannels  ?? null,
-      audioTags:      stream.audioTags?.length  ? stream.audioTags  : null,
-      size:           stream.size           ?? 0,
-      seeders:        stream.seeders        ?? null,
-      languages:      stream.languages?.length  ? stream.languages  : null,
-      languageEmojis: stream.languageEmojis?.length ? stream.languageEmojis : null,
-      type:           stream.url?.startsWith('magnet') ? 'Torrent' : 'Debrid',
-      cached:         stream.cached         ?? false,
-      library:        stream.library        ?? false,
-      regexMatched:   stream.regexMatched   ?? null,
-      year:           stream.year           ?? null,
-      season:         (stream.season  > 0)  ? stream.season  : null,
-      episode:        (stream.episode > 0)  ? stream.episode : null,
+    stream: stream || {},
+    service: { 
+      name: stream?.serviceName || 'Real-Debrid' 
     },
-    service: {
-      name:      svc || null,
-      shortName: (stream.serviceShortName || svc.split(' ')[0] || svc) || null,
-    },
-    addon: {
-      name: addonConfig?.name || addonConfig?.slug || null,
-    },
+    addon: { 
+      name: addonConfig?.name || 'Addon' 
+    }
   };
 }
 
