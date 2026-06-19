@@ -14,6 +14,8 @@ const BASE_URL  = process.env.BASE_URL || 'http://localhost:3001';
 const CACHE_TTL = (parseInt(process.env.PROXY_CACHE_TTL) || 300) * 1000;
 const streamCache = new Map();
 
+const PARSE_FAILED = Symbol('PARSE_FAILED');
+
 function getCacheKey(u, s, t, i) { return `${u}:${s}:${t}:${i}`; }
 function getFromCache(key) {
   const e = streamCache.get(key);
@@ -27,30 +29,30 @@ function setCache(key, data) {
 }
 
 /**
- * Applica titleTemplate (→ stream.name) e descriptionTemplate (→ stream.title)
- * usando il parser AIOStreams-compatibile.
- *
- * safeParse restituisce null se il risultato contiene ancora graffe non risolte,
- * in modo da fare fallback al valore originale invece di mostrare template rotti.
+ * safeParse — ritorna PARSE_FAILED solo se ci sono graffe non risolte nel risultato.
+ * Una stringa vuota "" è un risultato valido (es. trueVal intenzionalmente vuoto).
  */
+function safeParse(tmpl, ctx) {
+  if (!tmpl) return PARSE_FAILED;
+  const res = parseTemplate(tmpl, ctx);
+  // Fallback solo se rimangono token non risolti {qualcosa}
+  if (/{[^}]+}/.test(res)) return PARSE_FAILED;
+  return res;
+}
+
 function applyTemplates(streams, addonConfig) {
   const { titleTemplate, descriptionTemplate } = addonConfig;
   if (!titleTemplate && !descriptionTemplate) return streams;
 
   return streams.map(stream => {
-    const ctx = buildStreamContext(stream, addonConfig);
-
-    const safeParse = (tmpl) => {
-      if (!tmpl) return null;
-      const res = parseTemplate(tmpl, ctx);
-      // Se rimangono graffe nel risultato il template è malformato → fallback
-      return (res && !/{[^}]+}/.test(res)) ? res.trim() || null : null;
-    };
+    const ctx      = buildStreamContext(stream, addonConfig);
+    const newName  = titleTemplate       ? safeParse(titleTemplate,       ctx) : PARSE_FAILED;
+    const newTitle = descriptionTemplate ? safeParse(descriptionTemplate, ctx) : PARSE_FAILED;
 
     return {
       ...stream,
-      name:  safeParse(titleTemplate)       || stream.name,
-      title: safeParse(descriptionTemplate) || stream.title,
+      name:  newName  !== PARSE_FAILED ? newName  : stream.name,
+      title: newTitle !== PARSE_FAILED ? newTitle : stream.title,
     };
   });
 }
@@ -105,10 +107,7 @@ router.get('/:userId/:addonSlug/stream/:type/:id.json', asyncHandler(async (req,
   const upstream = await fetchUpstreamStreams(addonConfig.transportUrl, type, id);
   if (!upstream.success || !upstream.streams.length) return res.json({ streams: [] });
 
-  // 1. formatterEngine arricchisce ogni stream con quality/encode/audio/ecc.
   let formatted = formatStreams(upstream.streams, config, addonConfig.id);
-
-  // 2. templateEngine applica i template dell'utente usando i dati arricchiti
   formatted = applyTemplates(formatted, addonConfig);
 
   const response = {
@@ -120,16 +119,15 @@ router.get('/:userId/:addonSlug/stream/:type/:id.json', asyncHandler(async (req,
   res.json(response);
 }));
 
-// ── /proxy/:userId/manifest.json  (master) ────────────────────────────────
+// ── /proxy/:userId/manifest.json (master) ────────────────────────────────
 router.get('/:userId/manifest.json', asyncHandler(async (req, res) => {
   const { userId } = req.params;
   const config = await getUserConfig(userId);
   if (!config) return res.status(404).json({ error: 'User not found' });
 
-  const user = await getUserById(userId);
+  const user     = await getUserById(userId);
   const prefixes = new Set(['tt']);
   const types    = new Set(['movie', 'series']);
-
   for (const a of (config.addonConfigs || [])) {
     if (a.enabled === false) continue;
     (a.idPrefixes || []).forEach(p => prefixes.add(p));
@@ -150,7 +148,7 @@ router.get('/:userId/manifest.json', asyncHandler(async (req, res) => {
   });
 }));
 
-// ── /proxy/:userId/stream/:type/:id.json  (master) ────────────────────────
+// ── /proxy/:userId/stream/:type/:id.json (master) ─────────────────────────
 router.get('/:userId/stream/:type/:id.json', asyncHandler(async (req, res) => {
   const { userId, type, id } = req.params;
   const config = await getUserConfig(userId);
