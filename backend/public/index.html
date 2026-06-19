@@ -21,7 +21,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .brand{font-family:'Courier New',monospace;font-size:1.9rem;font-weight:900;letter-spacing:6px;color:var(--green);text-shadow:0 0 8px rgba(0,255,136,.6),0 0 24px rgba(0,255,136,.2);margin-bottom:3px}
 .tagline{color:var(--muted);font-size:.78rem;margin-bottom:32px}
 
-.panel{width:100%;max-width:620px;background:var(--s1);border:1px solid var(--border);border-radius:var(--r);padding:26px}
+.panel{width:100%;max-width:720px;background:var(--s1);border:1px solid var(--border);border-radius:var(--r);padding:26px}
 .panel+.panel{margin-top:14px}
 #config-panel{display:none}
 
@@ -60,6 +60,16 @@ hr.div{border:none;border-top:1px solid var(--border);margin:18px 0}
 .global-box::before{content:'GLOBAL';position:absolute;top:-9px;left:12px;font-size:.6rem;font-weight:800;color:var(--stremio);background:var(--s1);padding:0 6px;letter-spacing:1px}
 .global-badge{display:inline-flex;align-items:center;gap:5px;font-size:.7rem;color:var(--stremio);background:var(--sg);border:1px solid var(--stremio);border-radius:20px;padding:2px 9px;margin-bottom:10px}
 .global-note{font-size:.72rem;color:var(--muted);margin-top:8px;line-height:1.5}
+
+/* ── ADVANCED VARIABLES ── */
+.adv-box{background:var(--s2);border:1.5px solid var(--border2);border-radius:var(--r);padding:16px;margin:10px 0 6px}
+.adv-box::before{content:'ADVANCED VARIABLES';position:absolute;top:-9px;left:12px;font-size:.6rem;font-weight:800;color:var(--border2);background:var(--s1);padding:0 6px;letter-spacing:1px}
+.adv-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px 12px}
+.adv-field{display:flex;flex-direction:column;gap:2px}
+.adv-field label{font-size:.6rem;color:var(--dim);text-transform:uppercase;letter-spacing:.4px;font-weight:700}
+.adv-field input{background:var(--s3);border:1px solid var(--border);border-radius:var(--r3);padding:4px 6px;color:var(--text);font-family:monospace;font-size:.7rem;outline:none;transition:border-color .15s}
+.adv-field input:focus{border-color:var(--green)}
+.adv-field input::placeholder{color:var(--dim);font-size:.6rem}
 
 .addon-card{background:var(--s2);border:1px solid var(--border);border-radius:var(--r);margin-bottom:10px;overflow:hidden;transition:border-color .15s}
 .addon-card:hover{border-color:var(--border2)}
@@ -128,6 +138,8 @@ textarea.tmpl:focus{border-color:var(--green)}
 .sp{width:12px;height:12px;border-radius:50%;border:2px solid rgba(0,0,0,.15);border-top-color:currentColor;animation:spin .5s linear infinite;display:inline-block}
 @keyframes spin{to{transform:rotate(360deg)}}
 .footer{color:var(--dim);font-size:.67rem;margin-top:26px;text-align:center}
+
+.pos-rel{position:relative}
 </style>
 </head>
 <body>
@@ -164,7 +176,7 @@ textarea.tmpl:focus{border-color:var(--green)}
 
   <!-- GLOBAL TEMPLATE -->
   <div class="section-hdr">Global Template</div>
-  <div class="global-box" id="global-box">
+  <div class="global-box pos-rel">
     <div class="global-badge">⚡ Applied to all addons unless overridden</div>
     <div class="tmpl-grid">
       <div>
@@ -194,6 +206,52 @@ textarea.tmpl:focus{border-color:var(--green)}
     <p class="global-note">Leave both fields empty to use per-addon templates only.</p>
   </div>
 
+  <!-- ─── ADVANCED VARIABLES ─── -->
+  <div class="section-hdr" style="margin-top:18px">Advanced Variables</div>
+  <div class="adv-box pos-rel">
+    <p style="font-size:.7rem;color:var(--muted);margin-bottom:10px;line-height:1.5">
+      Set custom values for testing your templates. Leave empty to use defaults.
+    </p>
+    <div class="adv-grid" id="adv-grid">
+      <!-- Stream Variables -->
+      <div class="adv-field"><label>stream.title</label><input class="adv-input" data-var="stream.title" placeholder="Movie Title" oninput="updateAllPreviews()"></div>
+      <div class="adv-field"><label>stream.filename</label><input class="adv-input" data-var="stream.filename" placeholder="Movie.2023.2160p.mkv" oninput="updateAllPreviews()"></div>
+      <div class="adv-field"><label>stream.folderName</label><input class="adv-input" data-var="stream.folderName" placeholder="Movie.2023.2160p" oninput="updateAllPreviews()"></div>
+      <div class="adv-field"><label>stream.quality</label><input class="adv-input" data-var="stream.quality" placeholder="BluRay" oninput="updateAllPreviews()"></div>
+      <div class="adv-field"><label>stream.resolution</label><input class="adv-input" data-var="stream.resolution" placeholder="2160p" oninput="updateAllPreviews()"></div>
+      <div class="adv-field"><label>stream.encode</label><input class="adv-input" data-var="stream.encode" placeholder="HEVC" oninput="updateAllPreviews()"></div>
+      <div class="adv-field"><label>stream.hdr</label><input class="adv-input" data-var="stream.hdr" placeholder="DV" oninput="updateAllPreviews()"></div>
+      <div class="adv-field"><label>stream.visualTags (comma)</label><input class="adv-input" data-var="stream.visualTags" placeholder="HDR, DV, BluRay" oninput="updateAllPreviews()"></div>
+      <div class="adv-field"><label>stream.audio</label><input class="adv-input" data-var="stream.audio" placeholder="Atmos" oninput="updateAllPreviews()"></div>
+      <div class="adv-field"><label>stream.audioChannels</label><input class="adv-input" data-var="stream.audioChannels" placeholder="7.1" oninput="updateAllPreviews()"></div>
+      <div class="adv-field"><label>stream.audioTags (comma)</label><input class="adv-input" data-var="stream.audioTags" placeholder="Atmos, TrueHD, 7.1" oninput="updateAllPreviews()"></div>
+      <div class="adv-field"><label>stream.size (bytes)</label><input class="adv-input" data-var="stream.size" placeholder="62500000000" oninput="updateAllPreviews()"></div>
+      <div class="adv-field"><label>stream.seeders</label><input class="adv-input" data-var="stream.seeders" placeholder="87" oninput="updateAllPreviews()"></div>
+      <div class="adv-field"><label>stream.languages (comma)</label><input class="adv-input" data-var="stream.languages" placeholder="Italian, English" oninput="updateAllPreviews()"></div>
+      <div class="adv-field"><label>stream.languageEmojis (comma)</label><input class="adv-input" data-var="stream.languageEmojis" placeholder="🇮🇹, 🇬🇧" oninput="updateAllPreviews()"></div>
+      <div class="adv-field"><label>stream.year</label><input class="adv-input" data-var="stream.year" placeholder="2023" oninput="updateAllPreviews()"></div>
+      <div class="adv-field"><label>stream.season</label><input class="adv-input" data-var="stream.season" placeholder="-1" oninput="updateAllPreviews()"></div>
+      <div class="adv-field"><label>stream.episode</label><input class="adv-input" data-var="stream.episode" placeholder="-1" oninput="updateAllPreviews()"></div>
+      <div class="adv-field"><label>stream.releaseGroup</label><input class="adv-input" data-var="stream.releaseGroup" placeholder="GROUP" oninput="updateAllPreviews()"></div>
+      <div class="adv-field"><label>stream.type</label><input class="adv-input" data-var="stream.type" placeholder="Debrid" oninput="updateAllPreviews()"></div>
+      <div class="adv-field"><label>stream.cached</label><input class="adv-input" data-var="stream.cached" placeholder="true" oninput="updateAllPreviews()"></div>
+      <div class="adv-field"><label>stream.regexMatched</label><input class="adv-input" data-var="stream.regexMatched" placeholder="null" oninput="updateAllPreviews()"></div>
+      <div class="adv-field"><label>stream.duration (seconds)</label><input class="adv-input" data-var="stream.duration" placeholder="9120" oninput="updateAllPreviews()"></div>
+      <div class="adv-field"><label>stream.bitrate</label><input class="adv-input" data-var="stream.bitrate" placeholder="54800000" oninput="updateAllPreviews()"></div>
+      <div class="adv-field"><label>stream.container</label><input class="adv-input" data-var="stream.container" placeholder="mkv" oninput="updateAllPreviews()"></div>
+      <div class="adv-field"><label>stream.age</label><input class="adv-input" data-var="stream.age" placeholder="10d" oninput="updateAllPreviews()"></div>
+      
+      <!-- Service Variables -->
+      <div class="adv-field"><label>service.id</label><input class="adv-input" data-var="service.id" placeholder="realdebrid" oninput="updateAllPreviews()"></div>
+      <div class="adv-field"><label>service.shortName</label><input class="adv-input" data-var="service.shortName" placeholder="RD" oninput="updateAllPreviews()"></div>
+      <div class="adv-field"><label>service.name</label><input class="adv-input" data-var="service.name" placeholder="Real-Debrid" oninput="updateAllPreviews()"></div>
+      <div class="adv-field"><label>service.cached</label><input class="adv-input" data-var="service.cached" placeholder="true" oninput="updateAllPreviews()"></div>
+      
+      <!-- Addon Variables -->
+      <div class="adv-field"><label>addon.name</label><input class="adv-input" data-var="addon.name" placeholder="Torrentio" oninput="updateAllPreviews()"></div>
+    </div>
+  </div>
+
   <!-- PER-ADDON LIST -->
   <div class="section-hdr">Per-Addon Templates</div>
   <div id="addon-list"><p style="font-size:.8rem;color:var(--muted)">Loading addons…</p></div>
@@ -210,14 +268,13 @@ textarea.tmpl:focus{border-color:var(--green)}
 
 <script>
 // ═══════════════════════════════════════════════════════════════════════════
-// TEMPLATE ENGINE COMPLETO - Supporta TUTTE le funzionalità AIOStreams
+// TEMPLATE ENGINE COMPLETO
 // ═══════════════════════════════════════════════════════════════════════════
 
 function parseTemplate(template, ctx) {
   if (!template || typeof template !== 'string') return '';
   
   return template.replace(/\{([^{}]+)\}/g, (_, expr) => {
-    // Gestione OR
     if (expr.includes('::or::')) {
       const parts = expr.split('::or::');
       for (const part of parts) {
@@ -238,17 +295,13 @@ function evalExpr(expr, ctx) {
   const path = parts[0].trim();
   let val = getPath(ctx, path);
   
-  // Se è una proprietà semplice (es. {stream.quality})
   if (parts.length === 1) {
     return val != null ? String(val) : '';
   }
   
-  // Pipeline di modificatori
   for (let i = 1; i < parts.length; i++) {
     const mod = parts[i].trim();
     
-    // ── CONDIZIONALI ──
-    // Formato: exists["vero"||"falso"] o ~HDR["..."||""]
     const condMatch = mod.match(/^(exists|~|>|<|=|>=|<=)(?:([^[]*))?\["(.*?)"(?:\s*\|\|\s*"(.*?)")?\]$/);
     if (condMatch) {
       const type = condMatch[1];
@@ -261,48 +314,24 @@ function evalExpr(expr, ctx) {
       const numVal = parseFloat(val);
       
       switch(type) {
-        case 'exists':
-          met = (val !== undefined && val !== null && val !== '' && val !== false);
-          break;
-        case '~':
-          met = strVal.toLowerCase().includes(condVal.toLowerCase());
-          break;
-        case '>':
-          met = !isNaN(numVal) && numVal > parseFloat(condVal);
-          break;
-        case '<':
-          met = !isNaN(numVal) && numVal < parseFloat(condVal);
-          break;
-        case '>=':
-          met = !isNaN(numVal) && numVal >= parseFloat(condVal);
-          break;
-        case '<=':
-          met = !isNaN(numVal) && numVal <= parseFloat(condVal);
-          break;
-        case '=':
-          met = strVal === condVal;
-          break;
+        case 'exists': met = (val !== undefined && val !== null && val !== '' && val !== false); break;
+        case '~': met = strVal.toLowerCase().includes(condVal.toLowerCase()); break;
+        case '>': met = !isNaN(numVal) && numVal > parseFloat(condVal); break;
+        case '<': met = !isNaN(numVal) && numVal < parseFloat(condVal); break;
+        case '>=': met = !isNaN(numVal) && numVal >= parseFloat(condVal); break;
+        case '<=': met = !isNaN(numVal) && numVal <= parseFloat(condVal); break;
+        case '=': met = strVal === condVal; break;
       }
       
       if (met) {
-        // Se il trueVal contiene altre espressioni, risolvi ricorsivamente
-        if (trueVal.includes('{')) {
-          return parseTemplate(trueVal, ctx);
-        }
-        return trueVal;
+        return trueVal.includes('{') ? parseTemplate(trueVal, ctx) : trueVal;
       }
       if (falseVal !== '') {
-        if (falseVal.includes('{')) {
-          return parseTemplate(falseVal, ctx);
-        }
-        return falseVal;
+        return falseVal.includes('{') ? parseTemplate(falseVal, ctx) : falseVal;
       }
       return '';
     }
     
-    // ── TRASFORMAZIONI ──
-    
-    // bytes: formatta dimensione
     if (mod === 'bytes') {
       const b = parseFloat(val);
       if (!b || isNaN(b) || b === 0) return '';
@@ -312,23 +341,15 @@ function evalExpr(expr, ctx) {
       return b + ' B';
     }
     
-    // join: unisce array con separatore
-    if (mod === 'join') {
-      if (Array.isArray(val)) {
-        val = val.join(' ');
-      }
-      continue;
-    }
-    
-    if (mod.startsWith('join(')) {
+    if (mod === 'join' || mod.startsWith('join(')) {
       const m = mod.match(/join\(['"](.*?)['"]\)/);
-      if (m && Array.isArray(val)) {
-        val = val.join(m[1]);
+      const sep = m ? m[1] : ' ';
+      if (Array.isArray(val)) {
+        val = val.join(sep);
       }
       continue;
     }
     
-    // replace: sostituisce testo
     if (mod.startsWith('replace(')) {
       const m = mod.match(/replace\(['"](.*?)['"],\s*['"](.*?)['"]\)/);
       if (m) {
@@ -337,45 +358,26 @@ function evalExpr(expr, ctx) {
       continue;
     }
     
-    // title: uppercase
-    if (mod === 'title') {
+    if (mod === 'title' || mod === 'upper') {
       val = String(val ?? '').toUpperCase();
       continue;
     }
     
-    // upper: uppercase
-    if (mod === 'upper') {
-      val = String(val ?? '').toUpperCase();
-      continue;
-    }
-    
-    // lower: lowercase
     if (mod === 'lower') {
       val = String(val ?? '').toLowerCase();
       continue;
     }
     
-    // length: lunghezza
     if (mod === 'length') {
-      if (Array.isArray(val)) {
-        val = val.length;
-      } else {
-        val = String(val ?? '').length;
-      }
+      val = Array.isArray(val) ? val.length : String(val ?? '').length;
       continue;
     }
     
-    // first: primo elemento
     if (mod === 'first') {
-      if (Array.isArray(val)) {
-        val = val[0] ?? '';
-      } else {
-        val = String(val ?? '')[0] ?? '';
-      }
+      val = Array.isArray(val) ? (val[0] ?? '') : (String(val ?? '')[0] ?? '');
       continue;
     }
     
-    // last: ultimo elemento
     if (mod === 'last') {
       if (Array.isArray(val)) {
         val = val[val.length - 1] ?? '';
@@ -386,7 +388,6 @@ function evalExpr(expr, ctx) {
       continue;
     }
     
-    // truncate: tronca
     if (mod.startsWith('truncate(')) {
       const m = mod.match(/truncate\((\d+)\)/);
       if (m) {
@@ -397,7 +398,6 @@ function evalExpr(expr, ctx) {
       continue;
     }
     
-    // reverse: inverte
     if (mod === 'reverse') {
       if (Array.isArray(val)) {
         val = [...val].reverse();
@@ -407,7 +407,6 @@ function evalExpr(expr, ctx) {
       continue;
     }
     
-    // sort: ordina
     if (mod === 'sort') {
       if (Array.isArray(val)) {
         val = [...val].sort();
@@ -432,38 +431,124 @@ function getPath(obj, path) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// PREVIEW CONTEXT — rispecchia l'output reale di formatterEngine
+// PREVIEW CONTEXT — con supporto per variabili avanzate
 // ═══════════════════════════════════════════════════════════════════════════
+
+function getAdvancedVars() {
+  const vars = {};
+  document.querySelectorAll('.adv-input').forEach(input => {
+    const key = input.dataset.var;
+    let val = input.value.trim();
+    if (val === '') return;
+    
+    // Parse array se contiene virgole
+    if (val.includes(',')) {
+      val = val.split(',').map(s => s.trim()).filter(Boolean);
+    }
+    // Parse boolean
+    if (val === 'true') val = true;
+    if (val === 'false') val = false;
+    if (val === 'null') val = null;
+    // Parse number
+    if (!isNaN(val) && val !== '' && !val.includes(',')) val = parseFloat(val);
+    
+    // Imposta nel path
+    const parts = key.split('.');
+    let current = vars;
+    for (let i = 0; i < parts.length - 1; i++) {
+      if (!current[parts[i]]) current[parts[i]] = {};
+      current = current[parts[i]];
+    }
+    current[parts[parts.length - 1]] = val;
+  });
+  return vars;
+}
+
 function makeCtx(addonName, serviceName) {
-  return {
+  const adv = getAdvancedVars();
+  
+  // Default values
+  const defaults = {
     stream: {
-      title: 'Movie.Title.2024.1080p.BluRay.HEVC-GROUP\n🇮🇹 🇬🇧 ⚡ Real-Debrid\n💾 12.4 GB 👥 87',
+      title: 'Movie Title',
       name: '[RD⚡] Torrentio',
-      filename: 'Movie.Title.2024.1080p.BluRay.HEVC-GROUP.mkv',
-      quality: '1080p',
-      resolution: '1080p',
+      filename: 'Movie.Title.2023.2160p.BluRay.HEVC.DV.TrueHD.Atmos.7.1.iTA.ENG-GROUP.mkv',
+      folderName: 'Movie.Title.2023.2160p.BluRay.HEVC.DV.TrueHD.Atmos.7.1.iTA.ENG-GROUP',
+      quality: 'BluRay',
+      resolution: '2160p',
       encode: 'HEVC',
-      hdr: null,
-      visualTags: ['HDR', 'DV'],
+      hdr: 'DV',
+      visualTags: ['HDR', 'DV', 'BluRay'],
       audio: 'Atmos',
-      audioChannels: '5.1',
-      audioTags: ['Atmos', '5.1'],
-      size: 12400000000,
+      audioChannels: '7.1',
+      audioTags: ['Atmos', 'TrueHD', '7.1'],
+      size: 62500000000,
       seeders: 87,
-      languages: ['ITA', 'ENG'],
+      languages: ['Italian', 'English'],
       languageEmojis: ['🇮🇹', '🇬🇧'],
-      type: 'Debrid',
-      cached: true,
-      library: false,
-      regexMatched: null,
-      year: 2024,
+      languageCodes: ['ita', 'eng'],
+      smallLanguageCodes: ['ITA', 'ENG'],
+      year: '2023',
       season: -1,
       episode: -1,
-      serviceName: 'Real-Debrid',
+      releaseGroup: 'GROUP',
+      type: 'Debrid',
+      cached: true,
+      regexMatched: null,
+      duration: 9120,
+      bitrate: 54800000,
+      container: 'mkv',
+      extension: '.mkv',
+      age: '10d',
+      ageHours: 240,
+      serviceName: serviceName || 'Real-Debrid',
     },
-    service: { name: serviceName || 'Real-Debrid', shortName: 'RD' },
-    addon: { name: addonName || 'Torrentio' },
+    service: {
+      id: 'realdebrid',
+      shortName: 'RD',
+      name: serviceName || 'Real-Debrid',
+      cached: true,
+    },
+    addon: {
+      presetId: 'torrentio',
+      name: addonName || 'Torrentio',
+      manifestUrl: 'https://torrentio.strem.fun/manifest.json',
+    },
+    config: {
+      addonName: 'Foxmatter',
+    },
+    metadata: {
+      queryType: 'movie',
+      title: 'Movie Title',
+      runtime: 152,
+      episodeRuntime: 0,
+      genres: ['Action', 'Sci-Fi'],
+      year: 2023,
+    },
+    debug: {
+      json: '{"stream":{"title":"Movie Title"}}',
+      jsonf: '{\n  "stream": {\n    "title": "Movie Title"\n  }\n}',
+    },
+    tools: {
+      newLine: '\n',
+      removeLine: '',
+    },
   };
+  
+  // Merge profondo
+  function deepMerge(target, source) {
+    for (const key in source) {
+      if (source[key] && typeof source[key] === 'object' && !Array.isArray(source[key])) {
+        if (!target[key]) target[key] = {};
+        deepMerge(target[key], source[key]);
+      } else {
+        target[key] = source[key];
+      }
+    }
+    return target;
+  }
+  
+  return deepMerge(deepMerge({}, defaults), adv);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -485,28 +570,43 @@ const SNIP_D = [
   {l:'{stream.size::bytes} · {service.name}',v:'{stream.size::bytes} · {service.name}'},
   {l:'{stream.audioChannels::exists[""||"-"]}',v:'{stream.audioChannels::exists[""||"-"]}'},
   {l:'{stream.hdr::exists[""||""]}',v:'{stream.hdr::exists[""||""]}'},
+  {l:'{stream.title}',v:'{stream.title}'},
+  {l:'{stream.year}',v:'{stream.year}'},
+  {l:'{stream.releaseGroup}',v:'{stream.releaseGroup}'},
 ];
 const VARS = [
-  ['{stream.quality}','Risoluzione (1080p, 4K…)'],
+  ['{stream.title}','Titolo del film/serie'],
+  ['{stream.filename}','Nome file completo'],
+  ['{stream.folderName}','Nome cartella'],
+  ['{stream.quality}','Qualità (BluRay, WEB-DL…)'],
+  ['{stream.resolution}','Risoluzione (1080p, 2160p…)'],
   ['{stream.encode}','Codec (HEVC, x264…)'],
-  ['{stream.hdr}','HDR tag — null se assente'],
+  ['{stream.hdr}','HDR tag (DV, HDR10…)'],
+  ['{stream.visualTags}','Tag visivi (HDR, DV…)'],
   ['{stream.audio}','Audio (Atmos, TrueHD…)'],
   ['{stream.audioChannels}','Canali (5.1, 7.1…)'],
   ['{stream.audioTags}','Lista audio tags'],
-  ['{stream.size::bytes}','File size (12.4 GB)'],
+  ['{stream.size::bytes}','File size (62.5 GB)'],
+  ['{stream.folderSize}','Folder size (125 GB)'],
   ['{stream.seeders}','Seeders'],
-  ['{stream.filename}','Nome file'],
-  ['{stream.languages}','Lingue (ITA, ENG…)'],
+  ['{stream.languages}','Lingue (Italian, English…)'],
   ['{stream.languageEmojis}','Flag emoji 🇮🇹 🇬🇧'],
-  ['{stream.visualTags}','Visual tags (HDR, DV…)'],
   ['{stream.type}','Tipo (Debrid/Torrent/HTTP)'],
   ['{stream.cached}','true se in cache'],
   ['{stream.regexMatched}','Regex badge / null'],
   ['{stream.year}','Anno'],
   ['{stream.season}','Stagione (>0 se serie)'],
   ['{stream.episode}','Episodio (>0 se serie)'],
-  ['{service.name}','Servizio (Real-Debrid…)'],
-  ['{service.shortName}','Sigla (RD, AD…)'],
+  ['{stream.releaseGroup}','Release group'],
+  ['{stream.duration}','Durata in secondi'],
+  ['{stream.bitrate}','Bitrate in bps'],
+  ['{stream.container}','Container (mkv, mp4…)'],
+  ['{stream.extension}','Estensione (.mkv…)'],
+  ['{stream.age}','Età (10d)'],
+  ['{service.id}','ID servizio (realdebrid)'],
+  ['{service.shortName}','Sigla (RD)'],
+  ['{service.name}','Nome servizio (Real-Debrid)'],
+  ['{addon.presetId}','ID preset addon'],
   ['{addon.name}','Nome addon'],
 ];
 
@@ -555,6 +655,14 @@ async function doLogin(){
     await loadConfigScreen();
   }catch(_){showErr('Server unreachable.')}
   finally{btn.disabled=false;btn.textContent=`Log in with ${prov==='nuvio'?'Nuvio':'Stremio'}`}
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// UPDATE ALL PREVIEWS
+// ═══════════════════════════════════════════════════════════════════════════
+function updateAllPreviews(){
+  updateGlobalPreview();
+  addons.filter(a=>a.isProxiable).forEach(a=>updateAddonPreview(a.id));
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
