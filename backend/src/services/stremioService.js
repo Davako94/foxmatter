@@ -73,26 +73,19 @@ async function fetchUserAddons(authKey) {
       return { success: false, error: response.data.error, addons: [] };
     }
 
-    // Gestiamo le due possibili strutture di risposta in base all'account
-    const raw = response.data?.result?.addons || response.data?.result || [];
-    const collection = Array.isArray(raw) ? raw : [];
+    // Gestiamo più strutture di risposta possibili: addons, result, items, data
+    const collection = extractAddonCollection(response.data);
     
     const seenUrls = new Set();
     const processable = [];
 
     for (const addon of collection) {
-      // Estraiamo in sicurezza url e manifest (alcune API Stremio nidificano diversamente)
-      const manifestUrl = addon.transportUrl;
-      const manifest = addon.manifest;
-
-      if (manifestUrl && manifest) {
-        const normalized = normalizeAddon({ transportUrl: manifestUrl, manifest });
-        const cleanUrl = normalized.transportUrl.replace(/\/$/, '');
-        
-        if (!seenUrls.has(cleanUrl)) {
-          seenUrls.add(cleanUrl);
-          processable.push(normalized);
-        }
+      const normalized = await normalizeAddonFromAddonRow(addon);
+      if (!normalized) continue;
+      const cleanUrl = normalized.transportUrl.replace(/\/$/, '');
+      if (!seenUrls.has(cleanUrl)) {
+        seenUrls.add(cleanUrl);
+        processable.push(normalized);
       }
     }
 
@@ -102,6 +95,67 @@ async function fetchUserAddons(authKey) {
     logger.error('Error fetching user addons:', err.message);
     return { success: false, error: err.message, addons: [] };
   }
+}
+
+function extractAddonCollection(payload) {
+  const candidates = [
+    payload?.result?.addons,
+    payload?.result?.items,
+    payload?.result,
+    payload?.addons,
+    payload?.items,
+    payload?.data,
+    payload,
+  ];
+  for (const candidate of candidates) {
+    if (Array.isArray(candidate)) return candidate;
+  }
+  for (const candidate of candidates) {
+    if (candidate && typeof candidate === 'object') {
+      const values = Object.values(candidate).find(v => Array.isArray(v));
+      if (Array.isArray(values)) return values;
+    }
+  }
+  return [];
+}
+
+async function normalizeAddonFromAddonRow(addon) {
+  if (!addon || typeof addon !== 'object') return null;
+
+  const manifestUrl =
+    addon.transportUrl ||
+    addon.transport_url ||
+    addon.manifestUrl ||
+    addon.manifest_url ||
+    addon.url ||
+    addon.baseUrl ||
+    addon.base_url ||
+    addon.link ||
+    null;
+
+  if (!manifestUrl && !addon.manifest) return null;
+
+  if (addon.manifest && typeof addon.manifest === 'object') {
+    return normalizeAddon({ transportUrl: manifestUrl || addon.manifest.transportUrl || addon.manifest.url || '', manifest: addon.manifest });
+  }
+
+  const fetched = manifestUrl ? await fetchAddonManifest(manifestUrl) : null;
+  if (fetched?.success && fetched.manifest) {
+    return normalizeAddon({ transportUrl: manifestUrl, manifest: fetched.manifest });
+  }
+
+  return normalizeAddon({
+    transportUrl: manifestUrl,
+    manifest: {
+      id: addon.id || addon.slug || addon.name || manifestUrl,
+      name: addon.name || addon.title || addon.slug || 'Unknown Addon',
+      version: addon.version || '0.0.0',
+      resources: addon.resources || ['stream'],
+      types: addon.types || [],
+      idPrefixes: addon.idPrefixes || [],
+      behaviorHints: addon.behaviorHints || {},
+    },
+  });
 }
 
 async function fetchAddonManifest(transportUrl) {

@@ -40,7 +40,7 @@ router.get('/', asyncHandler(async (req, res) => {
   const configuredIds = new Set((config?.addonConfigs || []).map(a => a.addonId));
 
   // FILTRO DI ESCLUSIONE: Escludiamo Cinemeta, cataloghi o sottotitoli puri. Passano solo gli addon video reali.
-  const filteredAddons = result.addons.filter(addon => addon.isProxiable);
+  const filteredAddons = result.addons.filter(addon => addon && addon.isProxiable);
 
   const annotated = filteredAddons.map(addon => {
     return {
@@ -101,7 +101,7 @@ router.post('/sync', asyncHandler(async (req, res) => {
   await saveUserConfig(req.user.userId, updatedConfig);
 
   // Filtriamo anche il payload di ritorno per consistenza della UI
-  const filteredResultAddons = result.addons.filter(a => a.isProxiable);
+  const filteredResultAddons = result.addons.filter(a => a && a.isProxiable);
 
   res.json({
     success: true,

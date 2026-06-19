@@ -949,7 +949,16 @@ function schedulePreviewUpdate(){
 
 async function loadConfigScreen(){
   try{var r=await fetch('/api/config',{headers:{Authorization:'Bearer '+token}});if(r.ok)config=(await r.json()).config}catch(_){}
-  try{var r=await fetch('/api/addons',{headers:{Authorization:'Bearer '+token}});if(r.ok)addons=(await r.json()).addons||[]}catch(_){}
+  try{
+    var r=await fetch('/api/addons',{headers:{Authorization:'Bearer '+token}});
+    if(r.ok){
+      var data=await r.json();
+      addons=(data.addons||[]);
+      if(!addons.length && data.total===0){
+        console.warn('No proxiable addons returned by /api/addons');
+      }
+    }
+  }catch(err){ console.error('Failed to load addons', err); }
   try{
     var r=await fetch('/api/me',{headers:{Authorization:'Bearer '+token}});
     if(r.ok){
