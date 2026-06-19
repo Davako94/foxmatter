@@ -17,6 +17,7 @@ router.use(authenticate);
 router.get('/', asyncHandler(async (req, res) => {
   const user = await getUserById(req.user.userId);
   if (!user) return res.status(404).json({ error: 'Utente non trovato' });
+  const config = await getUserConfig(req.user.userId);
 
   let result;
 
@@ -32,26 +33,26 @@ router.get('/', asyncHandler(async (req, res) => {
     result = await fetchUserAddons(user.stremioAuthKey);
   }
 
-  if (!result.success) {
-    return res.status(502).json({ error: 'Impossibile recuperare gli addon', detail: result.error });
-  }
-
-  const config       = await getUserConfig(req.user.userId);
   const configuredIds = new Set((config?.addonConfigs || []).map(a => a.addonId));
+  const fallbackAddons = (config?.addonConfigs || []).map(a => ({
+    id: a.addonId || a.slug,
+    slug: a.slug,
+    name: a.name,
+    transportUrl: a.transportUrl,
+    idPrefixes: a.idPrefixes || [],
+    types: a.types || [],
+    logo: a.logo || null,
+    isProxiable: true,
+  }));
+
+  if (!result.success) {
+    logger.warn(`Addon discovery failed for user ${req.user.userId}: ${result.error}. Falling back to saved config.`);
+  }
 
   // FILTRO DI ESCLUSIONE: Escludiamo Cinemeta, cataloghi o sottotitoli puri. Passano solo gli addon video reali.
   const sourceAddons = result.addons.length
     ? result.addons
-    : (config?.addonConfigs || []).map(a => ({
-        id: a.addonId || a.slug,
-        slug: a.slug,
-        name: a.name,
-        transportUrl: a.transportUrl,
-        idPrefixes: a.idPrefixes || [],
-        types: a.types || [],
-        logo: a.logo || null,
-        isProxiable: true,
-      }));
+    : fallbackAddons;
 
   const filteredAddons = sourceAddons.filter(addon => addon && addon.isProxiable);
 
@@ -78,10 +79,6 @@ router.post('/sync', asyncHandler(async (req, res) => {
     result = await fetchUserAddons(user.stremioAuthKey);
   }
 
-  if (!result.success) {
-    return res.status(502).json({ error: 'Sync fallita', detail: result.error });
-  }
-
   const currentConfig = await getUserConfig(req.user.userId) || {
     globalBadges: [], addonConfigs: [], settings: {},
   };
@@ -89,7 +86,7 @@ router.post('/sync', asyncHandler(async (req, res) => {
   const existingIds = new Set(currentConfig.addonConfigs.map(a => a.addonId));
   
   // Applichiamo il medesimo filtro stringente basato su isProxiable per non inserire spazzatura nel DB
-  const sourceAddons = result.addons.length ? result.addons : (currentConfig.addonConfigs || []).map(a => ({
+  const fallbackAddons = (currentConfig.addonConfigs || []).map(a => ({
     id: a.addonId || a.slug,
     slug: a.slug,
     name: a.name,
@@ -99,6 +96,10 @@ router.post('/sync', asyncHandler(async (req, res) => {
     logo: a.logo || null,
     isProxiable: true,
   }));
+  const sourceAddons = result.success && result.addons.length ? result.addons : fallbackAddons;
+  if (!result.success) {
+    logger.warn(`Addon sync failed for user ${req.user.userId}: ${result.error}. Using saved config fallback.`);
+  }
 
   const newAddons = sourceAddons
     .filter(a => !existingIds.has(a.id) && a.isProxiable)
@@ -132,6 +133,7 @@ router.post('/sync', asyncHandler(async (req, res) => {
     total:   filteredResultAddons.length,
     added:   newAddons.length,
     addons:  filteredResultAddons,
+    fallback: !result.success,
   });
 }));
 
