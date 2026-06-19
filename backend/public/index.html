@@ -270,7 +270,7 @@
 
       </div>
 
-      <div class="section-shell collapsed" id="vars-section">
+      <div class="section-shell" id="vars-section">
         <button class="section-toggle" onclick="toggleSection('vars-section')">
           <div class="section-hdr">Advanced Variables – All AIOStreams Fields</div>
           <span class="chev-mini">▼</span>
@@ -285,7 +285,7 @@
         </div>
       </div>
 
-      <div class="section-shell collapsed" id="sorting-section">
+      <div class="section-shell" id="sorting-section">
         <button class="section-toggle" onclick="toggleSection('sorting-section')">
           <div class="section-hdr">Addon Order, Sorting & Limits</div>
           <span class="chev-mini">▼</span>
@@ -473,22 +473,22 @@ const DEFAULT_VALUES = {
 
 function parseTemplate(template, ctx) {
   if (!template || typeof template !== 'string') return '';
-  return template.replace(/\{([^{}]+)\}/g, function(_, expr) {
-    // Gestione OR
-    if (expr.includes('::or::')) {
-      var parts = expr.split('::or::');
-      for (var i = 0; i < parts.length; i++) {
-        var r = evalExpr(parts[i].trim(), ctx);
-        if (r !== '' && r != null && r !== false) return String(r);
-      }
-      return '';
-    }
-    var r = evalExpr(expr.trim(), ctx);
-    return r != null ? String(r) : '';
-  });
+
+  var current = template;
+  var guard = 0;
+
+  while (guard++ < 50) {
+    var match = current.match(/\{([^{}]*)\}/);
+    if (!match) break;
+    current = current.replace(match[0], String(evalExpr(match[1].trim(), ctx) ?? ''));
+  }
+
+  return current;
 }
 
 function evalExpr(expr, ctx) {
+  if (!expr) return '';
+
   var conditionalTail = expr.match(/^(.*)\["(.*?)"(?:\s*\|\|\s*"(.*?)")?\]$/);
   if (conditionalTail) {
     var conditionExpr = conditionalTail[1].trim();
@@ -498,19 +498,19 @@ function evalExpr(expr, ctx) {
     var chosen = met ? trueVal : falseVal;
     return chosen.indexOf('{') >= 0 ? parseTemplate(chosen, ctx) : chosen;
   }
-  if (expr.includes('::xor::')) {
-    var xorParts = expr.split('::xor::');
-    var xorCount = 0;
-    var xorLast = '';
-    for (var xi = 0; xi < xorParts.length; xi++) {
-      var xorRes = evalExpr(xorParts[xi].trim(), ctx);
-      if (xorRes !== '' && xorRes != null && xorRes !== false) {
-        xorCount++;
-        xorLast = xorRes;
-      }
-    }
-    return xorCount % 2 === 1 ? xorLast : '';
+  if (expr.includes('::or::') || expr.includes('::and::') || expr.includes('::xor::')) {
+    return evaluateConditionExpr(expr, ctx) ? 'true' : '';
   }
+
+  if (expr.indexOf('[') !== -1 && expr.indexOf(']') !== -1 && expr.indexOf('::') === -1) {
+    var nested = expr.match(/^(.*?)\["(.*?)"(?:\s*\|\|\s*"(.*?)")?\]$/);
+    if (nested) {
+      var met = evaluateConditionExpr(nested[1].trim(), ctx);
+      var pick = met ? (nested[2] || '') : (nested[3] || '');
+      return pick.indexOf('{') >= 0 ? parseTemplate(pick, ctx) : pick;
+    }
+  }
+
   var parts = expr.split('::');
   var path = parts[0].trim();
   var val = getPath(ctx, path);
@@ -523,7 +523,7 @@ function evalExpr(expr, ctx) {
     var mod = parts[i].trim();
     
     // ── CONDIZIONALI ──
-    var condMatch = mod.match(/^(exists|~|>=|<=|>|<|=)(?:([^[]*))?\["(.*?)"(?:\s*\|\|\s*"(.*?)")?\]$/);
+    var condMatch = mod.match(/^(exists|istrue|isfalse|~|>=|<=|>|<|=)(?:([^[]*))?\["(.*?)"(?:\s*\|\|\s*"(.*?)")?\]$/);
     if (condMatch) {
       var type = condMatch[1];
       var condVal = (condMatch[2] || '').trim();
@@ -536,6 +536,8 @@ function evalExpr(expr, ctx) {
       
       switch(type) {
         case 'exists': met = (val !== undefined && val !== null && val !== '' && val !== false); break;
+        case 'istrue': met = (val === true || val === 'true' || val === 1 || val === '1'); break;
+        case 'isfalse': met = (val === false || val === 'false' || val === 0 || val === '0' || val === '' || val === null || val === undefined); break;
         case '~': met = strVal.toLowerCase().includes(condVal.toLowerCase()); break;
         case '>': met = !isNaN(numVal) && numVal > parseFloat(condVal); break;
         case '<': met = !isNaN(numVal) && numVal < parseFloat(condVal); break;
@@ -572,7 +574,7 @@ function evalExpr(expr, ctx) {
       else if (stype === '>=') ok = !isNaN(sNum) && sNum >= parseFloat(sval);
       else if (stype === '<=') ok = !isNaN(sNum) && sNum <= parseFloat(sval);
       else if (stype === '=') ok = sStr === sval;
-      return ok ? true : '';
+      return ok ? 'true' : '';
     }
     
     // ── MODIFICATORI ──
