@@ -1,5 +1,7 @@
 // services/stremioService.js - All Stremio API interactions
 const axios = require('axios');
+const http = require('http');
+const https = require('https');
 const { logger } = require('../utils/logger');
 
 const STREMIO_API = process.env.STREMIO_API_BASE || 'https://api.strem.io';
@@ -12,6 +14,8 @@ const stremioClient = axios.create({
     'Content-Type': 'application/json',
     'User-Agent': STREMIO_UA,
   },
+  httpAgent: new http.Agent({ keepAlive: true, maxSockets: 50 }),
+  httpsAgent: new https.Agent({ keepAlive: true, maxSockets: 50 }),
 });
 
 /**
@@ -108,7 +112,9 @@ async function fetchAddonManifest(transportUrl) {
 
     const response = await axios.get(manifestUrl, { 
       timeout: 8000,
-      headers: { 'User-Agent': STREMIO_UA }
+      headers: { 'User-Agent': STREMIO_UA },
+      httpAgent: new http.Agent({ keepAlive: true, maxSockets: 50 }),
+      httpsAgent: new https.Agent({ keepAlive: true, maxSockets: 50 }),
     });
     return { success: true, manifest: response.data };
   } catch (err) {
@@ -130,6 +136,8 @@ async function fetchUpstreamStreams(transportUrl, type, id) {
         'Accept': 'application/json',
         'User-Agent': 'Stremio/4.4 (Foxmatter proxy)',
       },
+      httpAgent: new http.Agent({ keepAlive: true, maxSockets: 50 }),
+      httpsAgent: new https.Agent({ keepAlive: true, maxSockets: 50 }),
     });
 
     return {

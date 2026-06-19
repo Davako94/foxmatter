@@ -17,14 +17,38 @@
     --red:#f04444;--amber:#f59e0b;--blue:#3b82f6;
     --r:10px;--r2:7px;--r3:5px;
   }
-  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:20px 12px 60px}
-  .brand{font-family:'Courier New',monospace;font-size:1.6rem;font-weight:900;letter-spacing:6px;color:var(--green);text-shadow:0 0 8px rgba(0,255,136,.6);margin-bottom:2px}
-  .tagline{color:var(--muted);font-size:.7rem;margin-bottom:20px}
-  .panel{width:100%;max-width:880px;background:var(--s1);border:1px solid var(--border);border-radius:var(--r);padding:20px}
-  .panel+.panel{margin-top:12px}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:
+    radial-gradient(1200px 700px at 20% -10%, rgba(0,255,136,.12), transparent 55%),
+    radial-gradient(900px 500px at 100% 0%, rgba(140,73,224,.10), transparent 48%),
+    linear-gradient(180deg, #09090b 0%, #0b0b0f 100%);
+    color:var(--text);min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:24px 12px 70px}
+  .brand{font-family:'Courier New',monospace;font-size:1.75rem;font-weight:900;letter-spacing:7px;color:var(--green);text-shadow:0 0 12px rgba(0,255,136,.45);margin-bottom:4px}
+  .tagline{color:var(--muted);font-size:.72rem;margin-bottom:18px;max-width:860px;text-align:center;line-height:1.4}
+  .panel{width:100%;max-width:1120px;background:rgba(17,17,20,.92);border:1px solid rgba(255,255,255,.06);border-radius:16px;padding:22px;box-shadow:0 22px 60px rgba(0,0,0,.35)}
+  .panel+.panel{margin-top:14px}
   #config-panel{display:none}
+  .dashboard{display:grid;grid-template-columns:220px minmax(0,1fr);gap:16px;align-items:start}
+  .sidebar{position:sticky;top:18px;background:rgba(10,10,12,.65);border:1px solid rgba(255,255,255,.06);border-radius:16px;padding:14px;backdrop-filter:blur(12px)}
+  .side-title{font-size:.62rem;color:var(--muted);text-transform:uppercase;letter-spacing:1px;font-weight:800;margin-bottom:10px}
+  .nav-links{display:flex;flex-direction:column;gap:8px}
+  .nav-link{display:flex;align-items:center;justify-content:space-between;padding:10px 11px;border-radius:12px;border:1px solid var(--border);background:var(--s2);color:var(--text);text-decoration:none;font-size:.72rem;font-weight:700}
+  .nav-link span{color:var(--dim);font-size:.62rem;font-weight:800}
+  .nav-link:hover{border-color:var(--green);color:var(--green)}
+  .summary-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:14px}
+  .summary-card{background:linear-gradient(180deg,var(--s2),var(--s1));border:1px solid var(--border);border-radius:14px;padding:12px}
+  .summary-k{font-size:.6rem;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;font-weight:800;margin-bottom:4px}
+  .summary-v{font-size:.9rem;color:#fff;font-weight:900}
+  .summary-s{font-size:.62rem;color:var(--dim);margin-top:3px;line-height:1.35}
+  .section-shell{margin-top:14px}
+  .section-toggle{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;background:transparent;border:none;color:inherit;cursor:pointer;padding:0}
+  .section-toggle .section-hdr{margin:0;flex:1}
+  .section-body{margin-top:10px}
+  .collapsed .section-body{display:none}
+  .collapsed .chev-mini{transform:rotate(-90deg)}
+  .chev-mini{display:inline-block;transition:transform .18s;color:var(--muted)}
   .tabs{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px}
-  .tab{padding:8px;border-radius:var(--r2);border:1.5px solid var(--border);background:var(--s2);cursor:pointer;font-size:.75rem;font-weight:700;color:var(--muted);display:flex;align-items:center;justify-content:center;gap:6px;transition:all .15s}
+  .tab{padding:10px;border-radius:12px;border:1.5px solid var(--border);background:linear-gradient(180deg,var(--s2),var(--s1));cursor:pointer;font-size:.76rem;font-weight:800;color:var(--muted);display:flex;align-items:center;justify-content:center;gap:6px;transition:all .16s}
+  .tab:hover,.btn:hover,.snip:hover,.copy-btn:hover{transform:translateY(-1px)}
   [data-prov="stremio"] #tab-stremio{border-color:var(--stremio);color:var(--stremio);background:var(--sg)}
   [data-prov="nuvio"]   #tab-nuvio  {border-color:var(--nuvio);color:var(--nuvio);background:var(--ng)}
   label.lbl{display:block;font-size:.62rem;color:var(--muted);margin:8px 0 3px;text-transform:uppercase;letter-spacing:.5px}
@@ -41,84 +65,85 @@
   .btn-ghost:hover{border-color:var(--border2);color:var(--text)}
   [data-prov="stremio"] .btn-prov{background:var(--stremio);color:#fff}
   [data-prov="nuvio"]   .btn-prov{background:var(--nuvio);color:#000}
-  .status-bar{display:flex;align-items:center;gap:6px;font-size:.72rem;margin-bottom:12px}
-  .dot{width:6px;height:6px;border-radius:50%;background:var(--green);flex-shrink:0;box-shadow:0 0 6px var(--green)}
-  .status-ok{color:var(--green);font-weight:700}
-  .section-hdr{font-size:.65rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.7px;margin:16px 0 8px;display:flex;align-items:center;gap:8px}
-  .section-hdr::after{content:'';flex:1;height:1px;background:var(--border)}
+  .status-bar{display:flex;align-items:center;gap:8px;font-size:.73rem;margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid var(--border)}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--green);flex-shrink:0;box-shadow:0 0 10px var(--green)}
+  .status-ok{color:var(--green);font-weight:800;letter-spacing:.2px}
+  .section-hdr{font-size:.68rem;font-weight:800;color:#a1a1b1;text-transform:uppercase;letter-spacing:1px;margin:18px 0 10px;display:flex;align-items:center;gap:10px}
+  .section-hdr::before{content:'';width:10px;height:10px;border-radius:50%;background:linear-gradient(180deg,var(--green),var(--green2));box-shadow:0 0 10px rgba(0,255,136,.25)}
+  .section-hdr::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,var(--border),transparent)}
   hr.div{border:none;border-top:1px solid var(--border);margin:14px 0}
   .pos-rel{position:relative}
   
   /* Global Box */
-  .global-box{background:var(--s2);border:1.5px solid var(--stremio);border-radius:var(--r);padding:14px;margin-bottom:4px;position:relative}
-  .global-box::before{content:'GLOBAL';position:absolute;top:-8px;left:10px;font-size:.55rem;font-weight:800;color:var(--stremio);background:var(--s1);padding:0 5px;letter-spacing:1px}
-  .global-badge{display:inline-flex;align-items:center;gap:4px;font-size:.65rem;color:var(--stremio);background:var(--sg);border:1px solid var(--stremio);border-radius:20px;padding:1px 8px;margin-bottom:6px}
+  .global-box{background:linear-gradient(180deg,var(--s2),var(--s1));border:1.5px solid rgba(140,73,224,.45);border-radius:16px;padding:16px;margin-bottom:4px;position:relative;overflow:hidden}
+  .global-box::before{content:'GLOBAL';position:absolute;top:10px;right:12px;font-size:.55rem;font-weight:900;color:var(--stremio);background:rgba(140,73,224,.10);border:1px solid rgba(140,73,224,.35);padding:3px 7px;border-radius:999px;letter-spacing:1px}
+  .global-badge{display:inline-flex;align-items:center;gap:4px;font-size:.65rem;color:#d8c8ff;background:var(--sg);border:1px solid rgba(140,73,224,.35);border-radius:999px;padding:4px 10px;margin-bottom:8px}
   .global-note{font-size:.65rem;color:var(--muted);margin-top:6px;line-height:1.4}
   
   /* Advanced Variables */
-  .adv-box{background:var(--s2);border:1.5px solid var(--border2);border-radius:var(--r);padding:14px;margin:8px 0 4px;position:relative}
-  .adv-box::before{content:'ADVANCED VARIABLES';position:absolute;top:-8px;left:10px;font-size:.55rem;font-weight:800;color:var(--border2);background:var(--s1);padding:0 5px;letter-spacing:1px}
+  .adv-box{background:linear-gradient(180deg,var(--s2),var(--s1));border:1.5px solid var(--border2);border-radius:16px;padding:16px;margin:8px 0 4px;position:relative;overflow:hidden}
+  .adv-box::before{content:'SECTION';position:absolute;top:10px;right:12px;font-size:.55rem;font-weight:900;color:#b0b0c0;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);padding:3px 7px;border-radius:999px;letter-spacing:1px}
   .adv-cat{margin-top:10px;border-top:1px solid var(--border);padding-top:8px}
   .adv-cat:first-child{margin-top:0;border-top:none;padding-top:0}
-  .adv-cat-title{font-size:.6rem;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px}
-  .adv-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px 10px}
+  .adv-cat-title{font-size:.62rem;font-weight:800;color:#8d8d9a;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+  .adv-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px 12px}
   @media(max-width:700px){.adv-grid{grid-template-columns:1fr 1fr}}
   @media(max-width:500px){.adv-grid{grid-template-columns:1fr}}
   .adv-field{display:flex;flex-direction:column;gap:1px}
-  .adv-field label{font-size:.55rem;color:var(--dim);text-transform:uppercase;letter-spacing:.3px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .adv-field input{background:var(--s3);border:1px solid var(--border);border-radius:var(--r3);padding:2px 5px;color:var(--text);font-family:monospace;font-size:.65rem;outline:none;width:100%}
+  .adv-field label{font-size:.56rem;color:var(--dim);text-transform:uppercase;letter-spacing:.38px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .adv-field input{background:var(--s3);border:1px solid var(--border);border-radius:10px;padding:7px 9px;color:var(--text);font-family:monospace;font-size:.72rem;outline:none;width:100%}
   .adv-field input:focus{border-color:var(--green)}
-  .adv-field input::placeholder{color:var(--dim);font-size:.55rem}
+  .adv-field input::placeholder{color:var(--dim);font-size:.6rem}
   
   /* Addon Cards */
-  .addon-card{background:var(--s2);border:1px solid var(--border);border-radius:var(--r);margin-bottom:8px;overflow:hidden}
-  .addon-card.open{border-color:var(--green)}
-  .addon-header{display:flex;align-items:center;gap:8px;padding:8px 12px;cursor:pointer}
-  .addon-logo-fb{width:22px;height:22px;border-radius:4px;flex-shrink:0;background:var(--s3);display:flex;align-items:center;justify-content:center;font-size:.5rem;color:var(--dim);font-weight:800}
-  .addon-title{font-size:.78rem;font-weight:700;color:var(--green);flex:1}
-  .addon-meta{font-size:.6rem;color:var(--dim);margin-left:auto;padding-right:6px}
+  .addon-card{background:linear-gradient(180deg,var(--s2),var(--s1));border:1px solid var(--border);border-radius:16px;margin-bottom:10px;overflow:hidden}
+  .addon-card.open{border-color:rgba(0,255,136,.7);box-shadow:0 0 0 1px rgba(0,255,136,.08) inset}
+  .addon-header{display:flex;align-items:center;gap:10px;padding:10px 14px;cursor:pointer}
+  .addon-logo-fb{width:28px;height:28px;border-radius:8px;flex-shrink:0;background:linear-gradient(180deg,var(--s4),var(--s3));display:flex;align-items:center;justify-content:center;font-size:.58rem;color:#b7b7c4;font-weight:900;border:1px solid var(--border)}
+  .addon-title{font-size:.82rem;font-weight:800;color:var(--text);flex:1}
+  .addon-meta{font-size:.62rem;color:var(--dim);margin-left:auto;padding-right:6px;text-transform:uppercase;letter-spacing:.5px}
   .chevron{color:var(--dim);font-size:.65rem;transition:transform .2s;flex-shrink:0}
   .addon-card.open .chevron{transform:rotate(90deg)}
-  .addon-body{padding:10px 12px 12px;border-top:1px solid var(--border);display:none}
+  .addon-body{padding:12px 14px 14px;border-top:1px solid var(--border);display:none}
   .addon-card.open .addon-body{display:block}
   
-  .tmpl-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:6px}
-  .tmpl-col-label{font-size:.58rem;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:2px;display:flex;align-items:center;gap:4px}
+  .tmpl-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:8px}
+  .tmpl-col-label{font-size:.6rem;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;display:flex;align-items:center;gap:4px;font-weight:700}
   .tmpl-col-label span{color:var(--dim);font-size:.55rem}
-  textarea.tmpl{width:100%;padding:5px 7px;min-height:60px;background:var(--s3);border:1.5px solid var(--border);border-radius:var(--r3);color:var(--text);font-family:'Courier New',monospace;font-size:.68rem;resize:vertical;outline:none;line-height:1.4}
+  textarea.tmpl{width:100%;padding:8px 10px;min-height:82px;background:var(--s3);border:1.5px solid var(--border);border-radius:12px;color:var(--text);font-family:'Courier New',monospace;font-size:.72rem;resize:vertical;outline:none;line-height:1.5}
   textarea.tmpl:focus{border-color:var(--green)}
   
-  .snip-section{margin-top:4px}
-  .snip-label{font-size:.55rem;color:var(--dim);text-transform:uppercase;letter-spacing:.4px;margin-bottom:2px}
-  .snip-row{display:flex;flex-wrap:wrap;gap:3px}
-  .snip{padding:1px 6px;background:var(--s3);border:1px solid var(--border);border-radius:3px;font-family:monospace;font-size:.6rem;color:var(--muted);cursor:pointer;transition:all .12s;white-space:nowrap}
+  .snip-section{margin-top:6px}
+  .snip-label{font-size:.56rem;color:var(--dim);text-transform:uppercase;letter-spacing:.45px;margin-bottom:4px;font-weight:700}
+  .snip-row{display:flex;flex-wrap:wrap;gap:6px}
+  .snip{padding:4px 8px;background:var(--s3);border:1px solid var(--border);border-radius:999px;font-family:monospace;font-size:.62rem;color:var(--muted);cursor:pointer;transition:all .12s;white-space:nowrap}
   .snip:hover{border-color:var(--green);color:var(--green);background:var(--glow)}
   
-  .vars-toggle{display:flex;align-items:center;gap:4px;font-size:.65rem;color:var(--muted);cursor:pointer;margin-top:6px}
+  .vars-toggle{display:flex;align-items:center;gap:5px;font-size:.66rem;color:var(--muted);cursor:pointer;margin-top:8px;font-weight:700}
   .vars-toggle:hover{color:var(--text)}
-  .vars-panel{margin-top:4px;padding:8px;background:var(--s3);border:1px solid var(--border);border-radius:var(--r2);display:none;max-height:200px;overflow-y:auto}
+  .vars-panel{margin-top:6px;padding:10px;background:var(--s3);border:1px solid var(--border);border-radius:12px;display:none;max-height:220px;overflow-y:auto}
   .vars-panel.open{display:block}
-  .vars-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:2px 8px}
-  .var-row{font-size:.62rem}
+  .vars-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:4px 10px}
+  .var-row{font-size:.62rem;padding:2px 0}
   .var-k{font-family:monospace;color:var(--green)}
   .var-v{color:var(--dim)}
   
   .preview-section{margin-top:8px}
-  .preview-lbl{font-size:.58rem;color:var(--dim);text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px;display:flex;align-items:center;gap:5px}
+  .preview-lbl{font-size:.58rem;color:var(--dim);text-transform:uppercase;letter-spacing:.45px;margin-bottom:4px;display:flex;align-items:center;gap:5px;font-weight:700}
   .preview-lbl::after{content:'';flex:1;height:1px;background:var(--border)}
-  .preview-box{background:#000;border:1px solid var(--border);border-radius:var(--r2);padding:8px 10px}
-  .prev-name{font-size:.78rem;font-weight:700;color:#fff;margin-bottom:2px;min-height:1em;white-space:pre-wrap}
-  .prev-desc{font-size:.68rem;color:#aaa;line-height:1.4;white-space:pre-wrap;min-height:1em}
+  .preview-box{background:linear-gradient(180deg,#050506,#09090c);border:1px solid var(--border);border-radius:14px;padding:10px 12px}
+  .prev-name{font-size:.82rem;font-weight:800;color:#fff;margin-bottom:3px;min-height:1em;white-space:pre-wrap}
+  .prev-desc{font-size:.7rem;color:#aaa;line-height:1.45;white-space:pre-wrap;min-height:1em}
   
-  .upload-row{display:flex;align-items:center;gap:5px;margin-top:6px}
+  .upload-row{display:flex;align-items:center;gap:8px;margin-top:8px;flex-wrap:wrap}
   .file-input{display:none}
-  .upload-lbl{padding:2px 8px;background:var(--s3);border:1px dashed var(--border);border-radius:var(--r3);font-size:.65rem;cursor:pointer;color:var(--muted)}
+  .upload-lbl{padding:5px 10px;background:var(--s3);border:1px dashed var(--border);border-radius:999px;font-size:.65rem;cursor:pointer;color:var(--muted)}
   .upload-lbl:hover{border-color:var(--green);color:var(--green)}
   .upload-status{font-size:.65rem;color:var(--muted)}
   
-  .url-row{display:flex;align-items:center;gap:5px;background:var(--s2);border:1px solid var(--border);border-radius:var(--r2);padding:5px 8px;margin-top:8px}
-  .url-row code{flex:1;font-size:.6rem;color:var(--muted);word-break:break-all}
-  .copy-btn{padding:2px 8px;background:var(--s3);border:1px solid var(--border);border-radius:3px;color:var(--muted);font-size:.62rem;cursor:pointer}
+  .url-row{display:flex;align-items:center;gap:8px;background:var(--s2);border:1px solid var(--border);border-radius:14px;padding:8px 10px;margin-top:10px}
+  .url-row code{flex:1;font-size:.62rem;color:var(--muted);word-break:break-all}
+  .copy-btn{padding:5px 10px;background:var(--s3);border:1px solid var(--border);border-radius:999px;color:var(--muted);font-size:.62rem;cursor:pointer}
   .copy-btn:hover{color:var(--text)}
   
   .toggle-row{display:flex;align-items:center;gap:5px;margin-bottom:8px}
@@ -135,6 +160,11 @@
   .sp{width:10px;height:10px;border-radius:50%;border:2px solid rgba(0,0,0,.15);border-top-color:currentColor;animation:spin .5s linear infinite;display:inline-block}
   @keyframes spin{to{transform:rotate(360deg)}}
   .footer{color:var(--dim);font-size:.6rem;margin-top:20px;text-align:center}
+  @media(max-width:980px){
+    .dashboard{grid-template-columns:1fr}
+    .sidebar{position:relative;top:auto}
+    .summary-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  }
 </style>
 </head>
 <body>
@@ -163,13 +193,52 @@
     <span class="status-ok">Ready for configuration</span>
     <span id="prov-badge" style="color:var(--muted)"></span>
   </div>
-  <p style="font-size:.7rem;color:var(--muted);line-height:1.5;margin-bottom:4px">
-    Configure templates for each addon, or set a <strong style="color:var(--text)">global template</strong> applied to all.
-  </p>
+  <div class="dashboard">
+    <aside class="sidebar">
+      <div class="side-title">Jump to</div>
+      <div class="nav-links">
+        <a class="nav-link" href="#summary">Summary <span>01</span></a>
+        <a class="nav-link" href="#global-section">Global <span>02</span></a>
+        <a class="nav-link" href="#vars-section">Variables <span>03</span></a>
+        <a class="nav-link" href="#sorting-section">Sorting <span>04</span></a>
+        <a class="nav-link" href="#addons-section">Addons <span>05</span></a>
+        <a class="nav-link" href="#actions-section">Actions <span>06</span></a>
+      </div>
+    </aside>
+    <div>
+      <div class="summary-grid" id="summary">
+        <div class="summary-card">
+          <div class="summary-k">Provider</div>
+          <div class="summary-v" id="summary-provider">-</div>
+          <div class="summary-s">Current login provider</div>
+        </div>
+        <div class="summary-card">
+          <div class="summary-k">Addons</div>
+          <div class="summary-v" id="summary-addons">0</div>
+          <div class="summary-s">Proxiable addons loaded</div>
+        </div>
+        <div class="summary-card">
+          <div class="summary-k">Global</div>
+          <div class="summary-v" id="summary-global">Off</div>
+          <div class="summary-s">Global template enabled</div>
+        </div>
+        <div class="summary-card">
+          <div class="summary-k">Sort</div>
+          <div class="summary-v" id="summary-sort">Default</div>
+          <div class="summary-s">Active sort rules</div>
+        </div>
+      </div>
+      <p style="font-size:.7rem;color:var(--muted);line-height:1.5;margin-bottom:8px">
+        Configure templates for each addon, or set a <strong style="color:var(--text)">global template</strong> applied to all.
+      </p>
 
-  <!-- GLOBAL TEMPLATE -->
-  <div class="section-hdr">Global Template</div>
-  <div class="global-box pos-rel">
+      <div class="section-shell" id="global-section">
+        <button class="section-toggle" onclick="toggleSection('global-section')">
+          <div class="section-hdr">Global Template</div>
+          <span class="chev-mini">▼</span>
+        </button>
+        <div class="section-body">
+          <div class="global-box pos-rel">
     <div class="global-badge">⚡ Applied to all addons unless overridden</div>
     <div class="tmpl-grid">
       <div>
@@ -199,24 +268,80 @@
     <p class="global-note">Leave both fields empty to use per-addon templates only.</p>
   </div>
 
-  <!-- ADVANCED VARIABLES -->
-  <div class="section-hdr" style="margin-top:12px">Advanced Variables – All AIOStreams Fields</div>
-  <div class="adv-box pos-rel" id="adv-box">
+      </div>
+
+      <div class="section-shell collapsed" id="vars-section">
+        <button class="section-toggle" onclick="toggleSection('vars-section')">
+          <div class="section-hdr">Advanced Variables – All AIOStreams Fields</div>
+          <span class="chev-mini">▼</span>
+        </button>
+        <div class="section-body">
+          <div class="adv-box pos-rel" id="adv-box">
     <p style="font-size:.65rem;color:var(--muted);margin-bottom:6px;line-height:1.4">
       Set custom values for testing. Leave empty to use defaults. Arrays use comma separation.
     </p>
     <div id="adv-container"></div>
   </div>
+        </div>
+      </div>
 
-  <!-- PER-ADDON LIST -->
-  <div class="section-hdr">Per-Addon Templates</div>
-  <div id="addon-list"><p style="font-size:.72rem;color:var(--muted)">Loading addons…</p></div>
+      <div class="section-shell collapsed" id="sorting-section">
+        <button class="section-toggle" onclick="toggleSection('sorting-section')">
+          <div class="section-hdr">Addon Order, Sorting & Limits</div>
+          <span class="chev-mini">▼</span>
+        </button>
+        <div class="section-body">
+          <div class="adv-box pos-rel">
+    <p style="font-size:.65rem;color:var(--muted);margin-bottom:8px;line-height:1.4">
+      Control addon order, stream sorting, and result caps. Addon order is a comma-separated list of addon slugs or IDs.
+    </p>
+    <div class="adv-grid" style="grid-template-columns:1fr 1fr;">
+      <div class="adv-field">
+        <label>Addon order</label>
+        <input id="addon-order" placeholder="torrentio, torbox, gdrive" />
+      </div>
+      <div class="adv-field">
+        <label>Sort rules JSON</label>
+        <input id="sort-rules" placeholder='[{"field":"quality","direction":"desc"}]' />
+      </div>
+      <div class="adv-field">
+        <label>Max results per addon</label>
+        <input id="max-results-addon" type="number" min="0" placeholder="0 = unlimited" />
+      </div>
+      <div class="adv-field">
+        <label>Max results per quality</label>
+        <input id="max-results-quality" type="number" min="0" placeholder="0 = unlimited" />
+      </div>
+    </div>
+  </div>
+        </div>
+      </div>
 
-  <hr class="div">
-  <button class="btn btn-full btn-green" id="save-btn" onclick="saveConfig()">⚡ Save & Update</button>
-  <div class="url-row"><code id="url-text">—</code><button class="copy-btn" onclick="copyUrl()">Copy</button></div>
-  <a id="install-link" href="#" class="btn btn-full btn-prov" style="margin-top:8px">📥 Install in Stremio</a>
-  <button class="btn btn-full btn-ghost" onclick="doLogout()">↩ Switch account</button>
+      <div class="section-shell" id="addons-section">
+        <button class="section-toggle" onclick="toggleSection('addons-section')">
+          <div class="section-hdr">Per-Addon Templates</div>
+          <span class="chev-mini">▼</span>
+        </button>
+        <div class="section-body">
+          <div id="addon-list"><p style="font-size:.72rem;color:var(--muted)">Loading addons…</p></div>
+        </div>
+      </div>
+
+      <div class="section-shell" id="actions-section">
+        <button class="section-toggle" onclick="toggleSection('actions-section')">
+          <div class="section-hdr">Actions</div>
+          <span class="chev-mini">▼</span>
+        </button>
+        <div class="section-body">
+          <hr class="div">
+          <button class="btn btn-full btn-green" id="save-btn" onclick="saveConfig()">⚡ Save & Update</button>
+          <div class="url-row"><code id="url-text">—</code><button class="copy-btn" onclick="copyUrl()">Copy</button></div>
+          <a id="install-link" href="#" class="btn btn-full btn-prov" style="margin-top:8px">📥 Install in Stremio</a>
+          <button class="btn btn-full btn-ghost" onclick="doLogout()">↩ Switch account</button>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
 
 <div class="footer">Foxmatter · full AIOStreams variable support</div>
@@ -728,7 +853,7 @@ function buildAdvancedUI() {
       input.className = 'adv-input';
       input.dataset.var = path;
       input.placeholder = String(DEFAULT_VALUES[path] ?? '');
-      input.oninput = updateAllPreviews;
+      input.oninput = schedulePreviewUpdate;
       field.appendChild(label);
       field.appendChild(input);
       grid.appendChild(field);
@@ -805,12 +930,21 @@ async function doLogin(){
 }
 
 function updateAllPreviews(){
-  updateGlobalPreview();
-  if(addons) {
-    for(var i=0;i<addons.length;i++){
-      if(addons[i].isProxiable) updateAddonPreview(addons[i].id);
+  schedulePreviewUpdate();
+}
+
+var previewRaf = 0;
+function schedulePreviewUpdate(){
+  if(previewRaf) return;
+  previewRaf = requestAnimationFrame(function(){
+    previewRaf = 0;
+    updateGlobalPreview();
+    if(addons) {
+      for(var i=0;i<addons.length;i++){
+        if(addons[i].isProxiable) updateAddonPreview(addons[i].id);
+      }
     }
-  }
+  });
 }
 
 async function loadConfigScreen(){
@@ -833,18 +967,24 @@ async function loadConfigScreen(){
   document.getElementById('config-panel').setAttribute('data-prov',prov);
 
   var gc=config?.globalTemplate||{};
+  var settings=config?.settings||{};
   if(gc.titleTemplate) document.getElementById('global-name').value=gc.titleTemplate;
   if(gc.descriptionTemplate) document.getElementById('global-desc').value=gc.descriptionTemplate;
+  document.getElementById('addon-order').value=(settings.addonOrder||[]).join(', ');
+  document.getElementById('sort-rules').value=JSON.stringify(settings.sortRules||[]);
+  document.getElementById('max-results-addon').value=String(settings.maxResultsPerAddon||0);
+  document.getElementById('max-results-quality').value=String(settings.maxResultsPerQuality||0);
   if(prov==='nuvio' && (gc.titleTemplate || gc.descriptionTemplate) && Array.isArray(config?.addonConfigs)){
     config.addonConfigs = config.addonConfigs.map(function(a){
-      return Object.assign({}, a, { titleTemplate: null, descriptionTemplate: null });
+      return Object.assign({}, a, { titleTemplate: null, descriptionTemplate: null, nameTemplate: null });
     });
   }
 
-  fillSnippets('gsnip-name',SNIP_N,'global-name',function(){updateGlobalPreview();});
-  fillSnippets('gsnip-desc',SNIP_D,'global-desc',function(){updateGlobalPreview();});
-  updateGlobalPreview();
+  fillSnippets('gsnip-name',SNIP_N,'global-name',function(){schedulePreviewUpdate();});
+  fillSnippets('gsnip-desc',SNIP_D,'global-desc',function(){schedulePreviewUpdate();});
+  schedulePreviewUpdate();
   renderAddonList();
+  refreshSummary();
   document.getElementById('login-panel').style.display='none';
   document.getElementById('config-panel').style.display='block';
 }
@@ -864,6 +1004,7 @@ function updateGlobalPreview(){
   var ctx=makeCtx('Torrentio','Real-Debrid');
   document.getElementById('g-prev-name').textContent=parseTemplate(nt,ctx)||'—';
   document.getElementById('g-prev-desc').textContent=parseTemplate(dt,ctx)||'—';
+  refreshSummary();
 }
 
 function effectiveName(id){
@@ -881,6 +1022,12 @@ function renderAddonList(){
   var container=document.getElementById('addon-list');
   var proxiable=[];
   if(addons){ for(var i=0;i<addons.length;i++){ if(addons[i].isProxiable) proxiable.push(addons[i]); } }
+  var order=(config?.settings?.addonOrder||[]);
+  proxiable.sort(function(a,b){
+    var ai=order.indexOf(a.slug||a.id), bi=order.indexOf(b.slug||b.id);
+    ai=ai<0?999999:ai; bi=bi<0?999999:bi;
+    return ai-bi;
+  });
   if(!proxiable.length){ container.innerHTML='<p style="font-size:.7rem;color:var(--muted)">No proxiable addons found.</p>'; return; }
   container.innerHTML='';
   var globalName=document.getElementById('global-name')?.value||'';
@@ -890,7 +1037,7 @@ function renderAddonList(){
     var saved=null;
     if(config?.addonConfigs){ for(var j=0;j<config.addonConfigs.length;j++){ if(config.addonConfigs[j].addonId===addon.id){ saved=config.addonConfigs[j]; break; } } }
     saved=saved||{};
-    var forceGlobalOnly = prov === 'nuvio' && (globalName.trim() || globalDesc.trim());
+    var forceGlobalOnly = (globalName.trim() || globalDesc.trim());
     var nameVal=forceGlobalOnly ? '' : ((saved.titleTemplate && saved.titleTemplate !== globalName) ? saved.titleTemplate : '');
     var descVal=forceGlobalOnly ? '' : ((saved.descriptionTemplate && saved.descriptionTemplate !== globalDesc) ? saved.descriptionTemplate : '');
     var enabled=saved.enabled!==false;
@@ -923,12 +1070,41 @@ function renderAddonList(){
       '<div class="upload-row"><label class="upload-lbl" for="file-'+addon.id+'">📁 Upload .json badges</label><input type="file" class="file-input" id="file-'+addon.id+'" accept=".json" onchange="handleJson(event,\''+addon.id+'\')"><span class="upload-status" id="fst-'+addon.id+'">No file chosen</span></div>'+
       '</div>';
     container.appendChild(card);
-    fillSnippets('sn-'+addon.id+'-name',SNIP_N,'name-'+addon.id,function(){updateAddonPreview(addon.id);});
-    fillSnippets('sn-'+addon.id+'-desc',SNIP_D,'desc-'+addon.id,function(){updateAddonPreview(addon.id);});
+    fillSnippets('sn-'+addon.id+'-name',SNIP_N,'name-'+addon.id,function(){schedulePreviewUpdate();});
+    fillSnippets('sn-'+addon.id+'-desc',SNIP_D,'desc-'+addon.id,function(){schedulePreviewUpdate();});
     var vg=document.getElementById('vg-'+addon.id);
     for(var k=0;k<VARS.length;k++){ var el=document.createElement('div');el.className='var-row';el.innerHTML='<span class="var-k">'+VARS[k][0]+'</span> <span class="var-v">'+VARS[k][1]+'</span>'; vg.appendChild(el); }
     updateAddonPreview(addon.id);
   }
+  refreshSummary();
+}
+
+function refreshSummary(){
+  var provEl=document.getElementById('summary-provider');
+  if(provEl) provEl.textContent=prov==='nuvio'?'Nuvio':'Stremio';
+  var addonsEl=document.getElementById('summary-addons');
+  if(addonsEl) addonsEl.textContent=String((addons||[]).filter(function(a){ return a.isProxiable; }).length);
+  var globalEl=document.getElementById('summary-global');
+  if(globalEl){
+    var hasGlobal=(document.getElementById('global-name').value||'').trim() || (document.getElementById('global-desc').value||'').trim();
+    globalEl.textContent=hasGlobal?'On':'Off';
+  }
+  var sortEl=document.getElementById('summary-sort');
+  if(sortEl){
+    var rules=document.getElementById('sort-rules')?.value||'';
+    try{
+      var parsed=JSON.parse(rules||'[]');
+      sortEl.textContent=parsed.length ? (parsed.length+' rule'+(parsed.length===1?'':'s')) : 'Default';
+    }catch(_){
+      sortEl.textContent='Invalid';
+    }
+  }
+}
+
+function toggleSection(id){
+  var el=document.getElementById(id);
+  if(!el) return;
+  el.classList.toggle('collapsed');
 }
 
 function toggleCard(id){ document.getElementById('card-'+id).classList.toggle('open'); }
@@ -940,8 +1116,9 @@ function updateAddonPreview(id){
   var addon=null; if(addons){ for(var i=0;i<addons.length;i++){ if(addons[i].id===id){ addon=addons[i]; break; } } }
   var ctx=makeCtx(addon?.name,addon?.name);
   ctx.service.name=addon?.name||'Addon';
-  document.getElementById('pn-'+id).textContent=parseTemplate(effectiveName(id),ctx)||'—';
-  document.getElementById('pd-'+id).textContent=parseTemplate(effectiveDesc(id),ctx)||'—';
+  var globalOn = (document.getElementById('global-name').value||'').trim() || (document.getElementById('global-desc').value||'').trim();
+  document.getElementById('pn-'+id).textContent=parseTemplate(globalOn ? (effectiveName(id) || document.getElementById('global-name').value) : effectiveName(id),ctx)||'—';
+  document.getElementById('pd-'+id).textContent=parseTemplate(globalOn ? (effectiveDesc(id) || document.getElementById('global-desc').value) : effectiveDesc(id),ctx)||'—';
 }
 
 function handleJson(event,id){
@@ -977,6 +1154,14 @@ async function saveConfig(){
   var globalName=document.getElementById('global-name').value||null;
   var globalDesc=document.getElementById('global-desc').value||null;
   var addonConfigs=[];
+  var settings={
+    mergeStreams: config?.settings?.mergeStreams||false,
+    addonOrder: (document.getElementById('addon-order').value||'').split(',').map(function(s){return s.trim();}).filter(Boolean),
+    sortRules: [],
+    maxResultsPerAddon: parseInt(document.getElementById('max-results-addon').value||'0')||0,
+    maxResultsPerQuality: parseInt(document.getElementById('max-results-quality').value||'0')||0
+  };
+  try{ settings.sortRules = JSON.parse(document.getElementById('sort-rules').value||'[]') || []; }catch(_){ settings.sortRules=[]; }
   if(addons){
     for(var i=0;i<addons.length;i++){
       if(!addons[i].isProxiable) continue;
@@ -1003,7 +1188,7 @@ async function saveConfig(){
   var payload={
     globalBadges:config?.globalBadges||[],
     addonConfigs:addonConfigs,
-    settings:config?.settings||{mergeStreams:false},
+    settings:settings,
     globalTemplate:{titleTemplate:globalName,descriptionTemplate:globalDesc}
   };
   try{
@@ -1016,7 +1201,7 @@ async function saveConfig(){
 }
 
 function copyUrl(){ var url=document.getElementById('url-text').textContent; if(!url||url==='—')return; navigator.clipboard.writeText(url).then(function(){toast('URL copied!');}); }
-function doLogout(){ try{localStorage.removeItem('fm_token'); localStorage.removeItem('fm_prov')}catch(_){} token=null; config=null; addons=[]; document.getElementById('login-panel').style.display='block'; document.getElementById('config-panel').style.display='none'; document.getElementById('email').value=''; document.getElementById('password').value=''; document.getElementById('addon-list').innerHTML='<p style="font-size:.7rem;color:var(--muted)">Loading addons…</p>'; document.getElementById('global-name').value=''; document.getElementById('global-desc').value=''; switchProv('stremio'); }
+function doLogout(){ try{localStorage.removeItem('fm_token'); localStorage.removeItem('fm_prov')}catch(_){} token=null; config=null; addons=[]; document.getElementById('login-panel').style.display='block'; document.getElementById('config-panel').style.display='none'; document.getElementById('email').value=''; document.getElementById('password').value=''; document.getElementById('addon-list').innerHTML='<p style="font-size:.7rem;color:var(--muted)">Loading addons…</p>'; document.getElementById('global-name').value=''; document.getElementById('global-desc').value=''; refreshSummary(); switchProv('stremio'); }
 
 async function boot(){ switchProv(prov); if(token){ var r=await fetch('/api/me',{headers:{Authorization:'Bearer '+token}}); if(r.ok) await loadConfigScreen(); else try{localStorage.removeItem('fm_token')}catch(_){} } }
 

@@ -6,17 +6,23 @@ const { asyncHandler }           = require('../middleware/errorHandler');
 const { getUserConfig }          = require('../services/configService');
 const { fetchUpstreamStreams, fetchAddonManifest } = require('../services/stremioService');
 const { formatStreams }           = require('../services/formatterEngine');
-const { parseTemplate, buildStreamContext } = require('../services/templateEngine');
 const { getUserById }             = require('../services/userService');
 const { logger }                  = require('../utils/logger');
+const { createFormatter }         = require('../services/aiostreamFormatter/formatterFactory');
+const { sortStreams, limitResults } = require('../services/aiostreamFormatter/streamRules');
 
 const BASE_URL  = process.env.BASE_URL || 'http://localhost:3001';
 const CACHE_TTL = (parseInt(process.env.PROXY_CACHE_TTL) || 300) * 1000;
 const streamCache = new Map();
+const configCache = new Map();
+const manifestCache = new Map();
+const CONFIG_CACHE_TTL = (parseInt(process.env.PROXY_CONFIG_CACHE_TTL) || 60) * 1000;
+const MANIFEST_CACHE_TTL = (parseInt(process.env.PROXY_MANIFEST_CACHE_TTL) || 600) * 1000;
 
 const PARSE_FAILED = Symbol('PARSE_FAILED');
 
 function getCacheKey(u, s, t, i) { return `${u}:${s}:${t}:${i}`; }
+function getKey(a, b) { return `${a}:${b}`; }
 function getFromCache(key) {
   const e = streamCache.get(key);
   if (!e) return null;
@@ -27,17 +33,30 @@ function setCache(key, data) {
   if (streamCache.size > 1000) streamCache.delete(streamCache.keys().next().value);
   streamCache.set(key, { data, ts: Date.now() });
 }
-
-/**
- * safeParse — ritorna PARSE_FAILED solo se ci sono graffe non risolte nel risultato.
- * Una stringa vuota "" è un risultato valido (es. trueVal intenzionalmente vuoto).
- */
-function safeParse(tmpl, ctx) {
-  if (!tmpl) return PARSE_FAILED;
-  const res = parseTemplate(tmpl, ctx);
-  // Fallback solo se rimangono token non risolti {qualcosa}
-  if (/{[^}]+}/.test(res)) return PARSE_FAILED;
-  return res;
+function getTimedCache(map, key, ttl) {
+  const e = map.get(key);
+  if (!e) return null;
+  if (Date.now() - e.ts > ttl) { map.delete(key); return null; }
+  return e.data;
+}
+function setTimedCache(map, key, data) {
+  if (map.size > 1000) map.delete(map.keys().next().value);
+  map.set(key, { data, ts: Date.now() });
+}
+async function getCachedConfig(userId) {
+  const cached = getTimedCache(configCache, userId, CONFIG_CACHE_TTL);
+  if (cached) return cached;
+  const config = await getUserConfig(userId);
+  if (config) setTimedCache(configCache, userId, config);
+  return config;
+}
+async function getCachedManifest(transportUrl) {
+  const key = transportUrl.replace(/\/$/, '');
+  const cached = getTimedCache(manifestCache, key, MANIFEST_CACHE_TTL);
+  if (cached) return cached;
+  const manifest = await fetchAddonManifest(transportUrl);
+  if (manifest?.success) setTimedCache(manifestCache, key, manifest);
+  return manifest;
 }
 
 function applyTemplates(streams, addonConfig) {
@@ -46,17 +65,47 @@ function applyTemplates(streams, addonConfig) {
   const descriptionTemplate = addonConfig?.descriptionTemplate || globalTemplate.descriptionTemplate;
   if (!titleTemplate && !descriptionTemplate) return streams;
 
-  return streams.map(stream => {
-    const ctx      = buildStreamContext(stream, addonConfig);
-    const newName  = titleTemplate       ? safeParse(titleTemplate,       ctx) : PARSE_FAILED;
-    const newTitle = descriptionTemplate ? safeParse(descriptionTemplate, ctx) : PARSE_FAILED;
+  const formatter = createFormatter({
+    userData: {
+      formatter: {
+        id: 'custom',
+        definition: {
+          name: titleTemplate || '',
+          description: descriptionTemplate || '',
+        },
+      },
+    },
+  });
 
+  return streams.map(stream => {
+    const rendered = formatter.format(stream, addonConfig, globalTemplate);
     return {
       ...stream,
-      name:  newName  !== PARSE_FAILED ? newName  : stream.name,
-      title: newTitle !== PARSE_FAILED ? newTitle : stream.title,
+      name: rendered.name || stream.name,
+      title: rendered.description || stream.title,
     };
   });
+}
+
+function applyStreamRules(streams, config, addonConfig) {
+  const settings = config?.settings || {};
+  let out = Array.isArray(streams) ? [...streams] : [];
+  out = sortStreams(out, { criteria: settings.sortRules || [] });
+  if (settings.maxResultsPerQuality > 0) {
+    const grouped = new Map();
+    const limited = [];
+    for (const stream of out) {
+      const q = stream.quality || 'unknown';
+      const count = grouped.get(q) || 0;
+      if (count < settings.maxResultsPerQuality) {
+        grouped.set(q, count + 1);
+        limited.push(stream);
+      }
+    }
+    out = limited;
+  }
+  out = limitResults(out, { maxResults: settings.maxResultsPerAddon > 0 ? settings.maxResultsPerAddon : null });
+  return out;
 }
 
 // ── CORS ──────────────────────────────────────────────────────────────────
@@ -70,15 +119,18 @@ router.use((req, res, next) => {
 // ── /proxy/:userId/:addonSlug/manifest.json ────────────────────────────────
 router.get('/:userId/:addonSlug/manifest.json', asyncHandler(async (req, res) => {
   const { userId, addonSlug } = req.params;
-  const config = await getUserConfig(userId);
+  const config = await getCachedConfig(userId);
   if (!config) return res.status(404).json({ error: 'User configuration not found' });
 
   const addonConfig = config.addonConfigs?.find(a => a.slug === addonSlug);
   if (!addonConfig) return res.status(404).json({ error: 'Addon not found' });
 
-  const up   = await fetchAddonManifest(addonConfig.transportUrl);
+  const up   = await getCachedManifest(addonConfig.transportUrl);
   const orig = up.success ? up.manifest : {};
 
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
   res.json({
     id:          `foxmatter.proxy.${userId}.${addonSlug}`,
     name:        `${addonConfig.name || addonSlug} [Foxmatter]`,
@@ -96,7 +148,7 @@ router.get('/:userId/:addonSlug/manifest.json', asyncHandler(async (req, res) =>
 // ── /proxy/:userId/:addonSlug/stream/:type/:id.json ───────────────────────
 router.get('/:userId/:addonSlug/stream/:type/:id.json', asyncHandler(async (req, res) => {
   const { userId, addonSlug, type, id } = req.params;
-  const config = await getUserConfig(userId);
+  const config = await getCachedConfig(userId);
   if (!config) return res.json({ streams: [] });
 
   const addonConfig = config.addonConfigs?.find(a => a.slug === addonSlug);
@@ -111,6 +163,7 @@ router.get('/:userId/:addonSlug/stream/:type/:id.json', asyncHandler(async (req,
 
   let formatted = formatStreams(upstream.streams, config, addonConfig.id);
   formatted = applyTemplates(formatted, { ...addonConfig, globalTemplate: config.globalTemplate || {} });
+  formatted = applyStreamRules(formatted, config, addonConfig);
 
   const response = {
     streams: formatted,
@@ -124,18 +177,30 @@ router.get('/:userId/:addonSlug/stream/:type/:id.json', asyncHandler(async (req,
 // ── /proxy/:userId/manifest.json (master) ────────────────────────────────
 router.get('/:userId/manifest.json', asyncHandler(async (req, res) => {
   const { userId } = req.params;
-  const config = await getUserConfig(userId);
+  const config = await getCachedConfig(userId);
   if (!config) return res.status(404).json({ error: 'User not found' });
 
   const user     = await getUserById(userId);
   const prefixes = new Set(['tt']);
   const types    = new Set(['movie', 'series']);
-  for (const a of (config.addonConfigs || [])) {
+  const orderedAddons = [...(config.addonConfigs || [])].sort((a, b) => {
+    const order = config?.settings?.addonOrder || [];
+    const ai = order.indexOf(a.slug || a.addonId || a.id);
+    const bi = order.indexOf(b.slug || b.addonId || b.id);
+    const safeAi = ai === -1 ? Number.MAX_SAFE_INTEGER : ai;
+    const safeBi = bi === -1 ? Number.MAX_SAFE_INTEGER : bi;
+    return safeAi - safeBi;
+  });
+
+  for (const a of orderedAddons) {
     if (a.enabled === false) continue;
     (a.idPrefixes || []).forEach(p => prefixes.add(p));
     (a.types      || []).forEach(t => types.add(t));
   }
 
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
   res.json({
     id:          `foxmatter.master.${userId}`,
     name:        `Foxmatter [${user?.name || 'User'}]`,
@@ -153,11 +218,11 @@ router.get('/:userId/manifest.json', asyncHandler(async (req, res) => {
 // ── /proxy/:userId/stream/:type/:id.json (master) ─────────────────────────
 router.get('/:userId/stream/:type/:id.json', asyncHandler(async (req, res) => {
   const { userId, type, id } = req.params;
-  const config = await getUserConfig(userId);
+  const config = await getCachedConfig(userId);
   if (!config?.addonConfigs?.length) return res.json({ streams: [] });
 
   const results = await Promise.allSettled(
-    config.addonConfigs
+    [...config.addonConfigs]
       .filter(a => a.enabled !== false && a.transportUrl)
       .map(async (addonConf) => {
         const cacheKey = getCacheKey(userId, addonConf.slug, type, id);
@@ -169,6 +234,7 @@ router.get('/:userId/stream/:type/:id.json', asyncHandler(async (req, res) => {
 
         let formatted = formatStreams(upstream.streams, config, addonConf.id);
         formatted = applyTemplates(formatted, { ...addonConf, globalTemplate: config.globalTemplate || {} });
+        formatted = applyStreamRules(formatted, config, addonConf);
 
         setCache(cacheKey, { streams: formatted });
         return formatted;

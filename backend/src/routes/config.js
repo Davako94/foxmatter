@@ -54,6 +54,14 @@ const fullConfigSchema = z.object({
     defaultNameTemplate: z.string().optional(),
     defaultDescriptionTemplate: z.string().optional(),
     mergeStreams: z.boolean().default(false),
+    addonOrder: z.array(z.string()).default([]),
+    sortRules: z.array(z.object({
+      field: z.string(),
+      direction: z.enum(['asc', 'desc']).default('desc'),
+      order: z.array(z.string()).default([]),
+    })).default([]),
+    maxResultsPerAddon: z.number().int().min(0).default(0),
+    maxResultsPerQuality: z.number().int().min(0).default(0),
   }).optional(),
 });
 
@@ -367,6 +375,10 @@ function getDefaultConfig() {
     },
     settings: {
       mergeStreams: false,
+      addonOrder: [],
+      sortRules: [],
+      maxResultsPerAddon: 0,
+      maxResultsPerQuality: 0,
     },
   };
 }
