@@ -46,6 +46,10 @@ const addonConfigSchema = z.object({
 const fullConfigSchema = z.object({
   globalBadges: z.array(badgeSchema).default([]),
   addonConfigs: z.array(addonConfigSchema).default([]),
+  globalTemplate: z.object({
+    titleTemplate: z.string().nullable().optional(),
+    descriptionTemplate: z.string().nullable().optional(),
+  }).optional(),
   settings: z.object({
     defaultNameTemplate: z.string().optional(),
     defaultDescriptionTemplate: z.string().optional(),
@@ -357,6 +361,10 @@ function getDefaultConfig() {
       { pattern: 'web.?dl|webdl', label: 'WEB-DL', priority: 9 },
     ],
     addonConfigs: [],
+    globalTemplate: {
+      titleTemplate: null,
+      descriptionTemplate: null,
+    },
     settings: {
       mergeStreams: false,
     },
