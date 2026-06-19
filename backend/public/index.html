@@ -422,6 +422,24 @@ function evalExpr(expr, ctx) {
       }
       return '';
     }
+    var shortMatch = mod.match(/^(exists|istrue|isfalse|~|>=|<=|>|<|=)\s*(.*)$/);
+    if (shortMatch) {
+      var stype = shortMatch[1];
+      var sval = (shortMatch[2] || '').trim();
+      var sStr = Array.isArray(val) ? val.join(' ') : String(val ?? '');
+      var sNum = parseFloat(val);
+      var ok = false;
+      if (stype === 'exists') ok = (val !== undefined && val !== null && val !== '' && val !== false && !(Array.isArray(val) && val.length === 0));
+      else if (stype === 'istrue') ok = (val === true || val === 'true' || val === 1 || val === '1');
+      else if (stype === 'isfalse') ok = (val === false || val === 'false' || val === 0 || val === '0' || val === '' || val === null || val === undefined);
+      else if (stype === '~') ok = sStr.toLowerCase().includes(sval.toLowerCase());
+      else if (stype === '>') ok = !isNaN(sNum) && sNum > parseFloat(sval);
+      else if (stype === '<') ok = !isNaN(sNum) && sNum < parseFloat(sval);
+      else if (stype === '>=') ok = !isNaN(sNum) && sNum >= parseFloat(sval);
+      else if (stype === '<=') ok = !isNaN(sNum) && sNum <= parseFloat(sval);
+      else if (stype === '=') ok = sStr === sval;
+      return ok ? true : '';
+    }
     
     // ── MODIFICATORI ──
     if (mod === 'bytes') {
@@ -831,8 +849,9 @@ function renderAddonList(){
     var saved=null;
     if(config?.addonConfigs){ for(var j=0;j<config.addonConfigs.length;j++){ if(config.addonConfigs[j].addonId===addon.id){ saved=config.addonConfigs[j]; break; } } }
     saved=saved||{};
-    var nameVal=(saved.titleTemplate && saved.titleTemplate !== globalName) ? saved.titleTemplate : '';
-    var descVal=(saved.descriptionTemplate && saved.descriptionTemplate !== globalDesc) ? saved.descriptionTemplate : '';
+    var forceGlobalOnly = prov === 'nuvio' && (globalName.trim() || globalDesc.trim());
+    var nameVal=forceGlobalOnly ? '' : ((saved.titleTemplate && saved.titleTemplate !== globalName) ? saved.titleTemplate : '');
+    var descVal=forceGlobalOnly ? '' : ((saved.descriptionTemplate && saved.descriptionTemplate !== globalDesc) ? saved.descriptionTemplate : '');
     var enabled=saved.enabled!==false;
     var initials=(addon.name||'?').replace(/[^A-Za-z0-9]/g,'').slice(0,3).toUpperCase();
     var card=document.createElement('div');

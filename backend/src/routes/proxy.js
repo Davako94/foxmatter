@@ -41,7 +41,9 @@ function safeParse(tmpl, ctx) {
 }
 
 function applyTemplates(streams, addonConfig) {
-  const { titleTemplate, descriptionTemplate } = addonConfig;
+  const globalTemplate = addonConfig?.globalTemplate || {};
+  const titleTemplate = addonConfig?.titleTemplate || globalTemplate.titleTemplate;
+  const descriptionTemplate = addonConfig?.descriptionTemplate || globalTemplate.descriptionTemplate;
   if (!titleTemplate && !descriptionTemplate) return streams;
 
   return streams.map(stream => {
@@ -108,7 +110,7 @@ router.get('/:userId/:addonSlug/stream/:type/:id.json', asyncHandler(async (req,
   if (!upstream.success || !upstream.streams.length) return res.json({ streams: [] });
 
   let formatted = formatStreams(upstream.streams, config, addonConfig.id);
-  formatted = applyTemplates(formatted, addonConfig);
+  formatted = applyTemplates(formatted, { ...addonConfig, globalTemplate: config.globalTemplate || {} });
 
   const response = {
     streams: formatted,
@@ -166,7 +168,7 @@ router.get('/:userId/stream/:type/:id.json', asyncHandler(async (req, res) => {
         if (!upstream.success || !upstream.streams.length) return [];
 
         let formatted = formatStreams(upstream.streams, config, addonConf.id);
-        formatted = applyTemplates(formatted, addonConf);
+        formatted = applyTemplates(formatted, { ...addonConf, globalTemplate: config.globalTemplate || {} });
 
         setCache(cacheKey, { streams: formatted });
         return formatted;

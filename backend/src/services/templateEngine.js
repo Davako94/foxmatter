@@ -35,6 +35,9 @@ function evaluateExpression(expr, ctx) {
     const conditional = evaluateConditionalModifier(part, val, ctx);
     if (conditional.handled) return conditional.value;
 
+    const shorthand = evaluateShorthandCondition(part, val);
+    if (shorthand.handled) return shorthand.value;
+
     val = applyModifier(part, val);
   }
 
@@ -54,6 +57,49 @@ function evaluateConditionalModifier(part, val, ctx) {
 
   if (!chosen) return { handled: true, value: '' };
   return { handled: true, value: chosen.includes('{') ? parseTemplate(chosen, ctx) : chosen };
+}
+
+function evaluateShorthandCondition(part, val) {
+  const match = part.match(/^(exists|istrue|isfalse|~|>=|<=|>|<|=)\s*(.*)$/);
+  if (!match) return { handled: false };
+
+  const type = match[1];
+  const raw = (match[2] || '').trim();
+  const strVal = Array.isArray(val) ? val.join(' ') : String(val ?? '');
+  const numVal = parseFloat(val);
+  let met = false;
+
+  switch (type) {
+    case 'exists':
+      met = val !== undefined && val !== null && val !== '' && val !== false && !(Array.isArray(val) && val.length === 0);
+      break;
+    case 'istrue':
+      met = val === true || val === 'true' || val === 1 || val === '1';
+      break;
+    case 'isfalse':
+      met = val === false || val === 'false' || val === 0 || val === '0' || val === '' || val === null || val === undefined;
+      break;
+    case '~':
+      met = strVal.toLowerCase().includes(raw.toLowerCase());
+      break;
+    case '>':
+      met = !Number.isNaN(numVal) && numVal > parseFloat(raw);
+      break;
+    case '<':
+      met = !Number.isNaN(numVal) && numVal < parseFloat(raw);
+      break;
+    case '>=':
+      met = !Number.isNaN(numVal) && numVal >= parseFloat(raw);
+      break;
+    case '<=':
+      met = !Number.isNaN(numVal) && numVal <= parseFloat(raw);
+      break;
+    case '=':
+      met = strVal === raw;
+      break;
+  }
+
+  return { handled: true, value: met ? true : '' };
 }
 
 function matchesCondition(type, val, condVal) {
