@@ -364,6 +364,19 @@ function parseTemplate(template, ctx) {
 }
 
 function evalExpr(expr, ctx) {
+  if (expr.includes('::xor::')) {
+    var xorParts = expr.split('::xor::');
+    var xorCount = 0;
+    var xorLast = '';
+    for (var xi = 0; xi < xorParts.length; xi++) {
+      var xorRes = evalExpr(xorParts[xi].trim(), ctx);
+      if (xorRes !== '' && xorRes != null && xorRes !== false) {
+        xorCount++;
+        xorLast = xorRes;
+      }
+    }
+    return xorCount % 2 === 1 ? xorLast : '';
+  }
   var parts = expr.split('::');
   var path = parts[0].trim();
   var val = getPath(ctx, path);
@@ -376,7 +389,7 @@ function evalExpr(expr, ctx) {
     var mod = parts[i].trim();
     
     // ── CONDIZIONALI ──
-    var condMatch = mod.match(/^(exists|~|>|<|=|>=|<=)(?:([^[]*))?\["(.*?)"(?:\s*\|\|\s*"(.*?)")?\]$/);
+    var condMatch = mod.match(/^(exists|~|>=|<=|>|<|=)(?:([^[]*))?\["(.*?)"(?:\s*\|\|\s*"(.*?)")?\]$/);
     if (condMatch) {
       var type = condMatch[1];
       var condVal = (condMatch[2] || '').trim();
@@ -418,6 +431,32 @@ function evalExpr(expr, ctx) {
       if (b >= 1e6) return Math.round(b/1e6) + ' MB';
       if (b >= 1e3) return Math.round(b/1e3) + ' KB';
       return b + ' B';
+    }
+    if (mod === 'bytes2') {
+      var b2 = parseFloat(val);
+      if (!b2 || isNaN(b2) || b2 === 0) return '';
+      if (b2 >= 1099511627776) return (b2/1099511627776).toFixed(1) + ' TiB';
+      if (b2 >= 1073741824) return Math.round(b2/1073741824) + ' GiB';
+      if (b2 >= 1048576) return Math.round(b2/1048576) + ' MiB';
+      if (b2 >= 1024) return Math.round(b2/1024) + ' KiB';
+      return b2 + ' B';
+    }
+    if (mod === 'sbytes' || mod === 'sbytes2') {
+      var sb = parseFloat(val);
+      if (!sb || isNaN(sb) || sb === 0) return '';
+      var units = mod === 'sbytes2' ? ['B','KiB','MiB','GiB','TiB'] : ['B','KB','MB','GB','TB'];
+      var step = mod === 'sbytes2' ? 1024 : 1000;
+      var idx = 0;
+      while (sb >= step && idx < units.length - 1) { sb /= step; idx++; }
+      return (sb >= 10 ? sb.toFixed(0) : sb.toFixed(1)) + ' ' + units[idx];
+    }
+    if (mod === 'bitrate' || mod === 'rbitrate' || mod === 'sbitrate') {
+      var br = parseFloat(val);
+      if (!br || isNaN(br) || br === 0) return '';
+      var brUnits = ['bps','Kbps','Mbps','Gbps'];
+      var bi = 0;
+      while (br >= 1000 && bi < brUnits.length - 1) { br /= 1000; bi++; }
+      return (mod === 'rbitrate' ? Math.round(br) : (mod === 'sbitrate' ? (br >= 10 ? br.toFixed(0) : br.toFixed(1)) : br.toFixed(1))) + ' ' + brUnits[bi];
     }
     
     if (mod === 'join' || mod.startsWith('join(')) {
@@ -461,6 +500,32 @@ function evalExpr(expr, ctx) {
       else val = String(val??'').split('').sort().join('');
       continue;
     }
+    if (mod === 'rsort') {
+      if (Array.isArray(val)) val = [...val].sort().reverse();
+      else val = String(val??'').split('').sort().reverse().join('');
+      continue;
+    }
+    if (mod === 'lsort') {
+      if (Array.isArray(val)) val = [...val].sort(function(a,b){ return String(a).localeCompare(String(b)); });
+      continue;
+    }
+    if (mod === 'first') {
+      val = Array.isArray(val) ? (val[0] ?? '') : (String(val ?? '')[0] ?? '');
+      continue;
+    }
+    if (mod === 'last') {
+      val = Array.isArray(val) ? (val[val.length-1] ?? '') : (String(val ?? '').slice(-1));
+      continue;
+    }
+    if (mod === 'random') {
+      if (Array.isArray(val) && val.length) val = val[Math.floor(Math.random() * val.length)];
+      continue;
+    }
+    if (mod.startsWith('slice(')) {
+      var sm = mod.match(/slice\((\-?\d+)(?:,\s*(\-?\d+))?\)/);
+      if (sm && Array.isArray(val)) val = val.slice(parseInt(sm[1]), sm[2] !== undefined ? parseInt(sm[2]) : undefined);
+      continue;
+    }
     if (mod === 'string') { val = String(val ?? ''); continue; }
     if (mod === 'hex') { val = parseInt(val).toString(16); continue; }
     if (mod === 'octal') { val = parseInt(val).toString(8); continue; }
@@ -481,6 +546,11 @@ function evalExpr(expr, ctx) {
       var filled = '★'.repeat(Math.min(5, stars));
       var empty = '☆'.repeat(mod === 'pstar' ? 5 - Math.min(5, stars) : 0);
       val = filled + empty;
+      continue;
+    }
+    if (mod === 'smallcaps') {
+      var map = {a:'ᴀ',b:'ʙ',c:'ᴄ',d:'ᴅ',e:'ᴇ',f:'ꜰ',g:'ɢ',h:'ʜ',i:'ɪ',j:'ᴊ',k:'ᴋ',l:'ʟ',m:'ᴍ',n:'ɴ',o:'ᴏ',p:'ᴘ',q:'ǫ',r:'ʀ',s:'ꜱ',t:'ᴛ',u:'ᴜ',v:'ᴠ',w:'ᴡ',x:'x',y:'ʏ',z:'ᴢ'};
+      val = String(val ?? '').toLowerCase().split('').map(function(ch){ return map[ch] || ch; }).join('');
       continue;
     }
   }
@@ -754,13 +824,15 @@ function renderAddonList(){
   if(addons){ for(var i=0;i<addons.length;i++){ if(addons[i].isProxiable) proxiable.push(addons[i]); } }
   if(!proxiable.length){ container.innerHTML='<p style="font-size:.7rem;color:var(--muted)">No proxiable addons found.</p>'; return; }
   container.innerHTML='';
+  var globalName=document.getElementById('global-name')?.value||'';
+  var globalDesc=document.getElementById('global-desc')?.value||'';
   for(var i=0;i<proxiable.length;i++){
     var addon=proxiable[i];
     var saved=null;
     if(config?.addonConfigs){ for(var j=0;j<config.addonConfigs.length;j++){ if(config.addonConfigs[j].addonId===addon.id){ saved=config.addonConfigs[j]; break; } } }
     saved=saved||{};
-    var nameVal=saved.titleTemplate||'';
-    var descVal=saved.descriptionTemplate||'';
+    var nameVal=(saved.titleTemplate && saved.titleTemplate !== globalName) ? saved.titleTemplate : '';
+    var descVal=(saved.descriptionTemplate && saved.descriptionTemplate !== globalDesc) ? saved.descriptionTemplate : '';
     var enabled=saved.enabled!==false;
     var initials=(addon.name||'?').replace(/[^A-Za-z0-9]/g,'').slice(0,3).toUpperCase();
     var card=document.createElement('div');
@@ -851,10 +923,10 @@ async function saveConfig(){
       var addon=addons[i];
       var tog=document.getElementById('tog-'+addon.id);
       var enabled=tog?tog.classList.contains('on'):true;
-      var perName=document.getElementById('name-'+addon.id)?.value||null;
-      var perDesc=document.getElementById('desc-'+addon.id)?.value||null;
-      var finalName=perName||globalName;
-      var finalDesc=perDesc||globalDesc;
+      var perNameRaw=document.getElementById('name-'+addon.id)?.value||'';
+      var perDescRaw=document.getElementById('desc-'+addon.id)?.value||'';
+      var finalName=perNameRaw.trim() ? perNameRaw : null;
+      var finalDesc=perDescRaw.trim() ? perDescRaw : null;
       var jsonEl=document.getElementById('file-'+addon.id);
       var jsonStr=jsonEl?.getAttribute('data-json');
       var badges=[];
