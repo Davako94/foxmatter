@@ -16,9 +16,7 @@ const supabase = createClient(
   { auth: { persistSession: false } }
 );
 
-// ─── TUTTE LE VARIABILI AIOSTREAMS (documentazione ufficiale) ───
-
-// Oggetti radice supportati
+// Whitelist estesa radice degli oggetti supportati secondo le specifiche ufficiali AIOStreams
 const VALID_OBJECT_ROOTS = new Set([
   'config',
   'stream',
@@ -29,121 +27,19 @@ const VALID_OBJECT_ROOTS = new Set([
   'tools'
 ]);
 
-// TUTTE le variabili AIOStreams (da documentazione)
-const AIOSTREAMS_VARS = new Set([
-  // Config
-  'config.addonName',
-  
-  // Stream - Source
-  'stream.type', 'stream.proxied', 'stream.library', 'stream.indexer',
-  'stream.message', 'stream.infoHash',
-  
-  // Stream - File
-  'stream.filename', 'stream.folderName', 'stream.size', 'stream.folderSize',
-  'stream.bitrate', 'stream.duration', 'stream.container', 'stream.extension',
-  
-  // Stream - Video
-  'stream.quality', 'stream.resolution', 'stream.visualTags', 'stream.encode',
-  'stream.network', 'stream.hasChapters',
-  
-  // Stream - Audio
-  'stream.audioTags', 'stream.audioChannels',
-  
-  // Stream - Languages
-  'stream.languages', 'stream.languageEmojis', 'stream.languageCodes',
-  'stream.smallLanguageCodes', 'stream.uLanguages', 'stream.uLanguageEmojis',
-  'stream.uLanguageCodes', 'stream.uSmallLanguageCodes', 'stream.dubbed',
-  
-  // Stream - Subtitles
-  'stream.subtitles', 'stream.subtitleEmojis', 'stream.subtitleCodes',
-  'stream.smallSubtitleCodes', 'stream.uSubtitles', 'stream.uSubtitleEmojis',
-  'stream.uSubtitleCodes', 'stream.uSmallSubtitleCodes', 'stream.subbed',
-  
-  // Stream - Release
-  'stream.title', 'stream.year', 'stream.date', 'stream.releaseGroup',
-  'stream.editions', 'stream.repack', 'stream.regraded', 'stream.uncensored',
-  'stream.unrated', 'stream.upscaled',
-  
-  // Stream - Season/Episode
-  'stream.seasonPack', 'stream.seasons', 'stream.formattedSeasons',
-  'stream.folderSeasons', 'stream.formattedFolderSeasons', 'stream.episodes',
-  'stream.formattedEpisodes', 'stream.folderEpisodes',
-  'stream.formattedFolderEpisodes', 'stream.seasonEpisode',
-  
-  // Stream - P2P/Tracker
-  'stream.seeders', 'stream.private', 'stream.freeleech', 'stream.age',
-  'stream.ageHours',
-  
-  // Stream - Anime
-  'stream.seadex', 'stream.seadexBest',
-  
-  // Stream - Scoring
-  'stream.regexMatched', 'stream.rankedRegexMatched', 'stream.regexScore',
-  'stream.nRegexScore', 'stream.seScore', 'stream.nSeScore',
-  'stream.seMatched', 'stream.rseMatched',
-  
-  // Service
-  'service.id', 'service.shortName', 'service.name', 'service.cached',
-  
-  // Addon
-  'addon.presetId', 'addon.name', 'addon.manifestUrl',
-  
-  // Metadata
-  'metadata.queryType', 'metadata.title', 'metadata.runtime',
-  'metadata.episodeRuntime', 'metadata.genres', 'metadata.year',
-  
-  // Debug
-  'debug.json', 'debug.jsonf',
-  
-  // Tools
-  'tools.newLine', 'tools.removeLine'
-]);
-
-// Variabili legacy Foxmatter (fallback)
-const LEGACY_VARS = new Set([
+// Manteniamo le variabili Foxmatter originali come fallback legacy
+const VALID_TEMPLATE_VARS = new Set([
   'original_name', 'original_title', 'original_description',
   'quality', 'size', 'seeders', 'audio', 'language',
   'codec', 'source', 'release_group', 'badges',
 ]);
 
-// ─── Helper per validazione ───────────────────────────────────────────────
-
-function extractTemplateVars(template) {
-  if (typeof template !== 'string') return [];
-  const matches = template.matchAll(/\{([^}]+)\}/g);
-  return [...matches].map(m => m[1].trim());
-}
-
-function getUnknownVars(template) {
-  const vars = extractTemplateVars(template);
-  const unknown = [];
-  
-  for (const v of vars) {
-    // Ignora costrutti speciali
-    if (v.startsWith('badge:') || v.startsWith('if:')) continue;
-    
-    const rawVar = v.split('::')[0].trim();
-    
-    // Controlla se è una variabile AIOStreams valida
-    if (AIOSTREAMS_VARS.has(rawVar)) continue;
-    
-    // Controlla se è una variabile legacy
-    if (LEGACY_VARS.has(rawVar)) continue;
-    
-    // Controlla se è un oggetto radice con proprietà
-    if (rawVar.includes('.')) {
-      const root = rawVar.split('.')[0];
-      if (VALID_OBJECT_ROOTS.has(root)) continue;
-    }
-    
-    unknown.push(v);
-  }
-  
-  return unknown;
-}
-
-// ─── Funzioni principali ──────────────────────────────────────────────────
-
+/**
+ * Load a user's full formatting configuration.
+ * Returns null if no config has been saved yet.
+ * @param {string} userId
+ * @returns {object|null}
+ */
 async function getUserConfig(userId) {
   const { data, error } = await supabase
     .from('user_configs')
@@ -159,16 +55,18 @@ async function getUserConfig(userId) {
   return data?.config ?? null;
 }
 
+/**
+ * Persist (upsert) a user's full formatting configuration.
+ * @param {string} userId
+ * @param {object} config - Validated config object
+ */
 async function saveUserConfig(userId, config) {
-  // Sanitizza i template prima del salvataggio
-  const sanitized = sanitizeConfig(config);
-  
   const { error } = await supabase
     .from('user_configs')
     .upsert(
       {
         user_id: userId,
-        config: sanitized,
+        config,
         updated_at: new Date().toISOString(),
       },
       { onConflict: 'user_id', ignoreDuplicates: false }
@@ -183,6 +81,10 @@ async function saveUserConfig(userId, config) {
   return true;
 }
 
+/**
+ * Delete a user's configuration (e.g. on account deletion).
+ * @param {string} userId
+ */
 async function deleteUserConfig(userId) {
   const { error } = await supabase
     .from('user_configs')
@@ -197,57 +99,17 @@ async function deleteUserConfig(userId) {
   return true;
 }
 
-// ─── Sanitizzazione ────────────────────────────────────────────────────────
-
-function sanitizeConfig(config) {
-  if (!config) return config;
-  
-  // Sanitizza i template per-addon
-  if (config.addonConfigs && Array.isArray(config.addonConfigs)) {
-    config.addonConfigs = config.addonConfigs.map(addon => {
-      // Converti {title} in {stream.title}
-      if (addon.descriptionTemplate) {
-        addon.descriptionTemplate = addon.descriptionTemplate
-          .replace(/\{title(::|\})/g, '{stream.title$1')
-          .replace(/\{name(::|\})/g, '{stream.name$1');
-      }
-      if (addon.nameTemplate) {
-        addon.nameTemplate = addon.nameTemplate
-          .replace(/\{title(::|\})/g, '{stream.title$1')
-          .replace(/\{name(::|\})/g, '{stream.name$1');
-      }
-      if (addon.titleTemplate) {
-        addon.titleTemplate = addon.titleTemplate
-          .replace(/\{title(::|\})/g, '{stream.title$1')
-          .replace(/\{name(::|\})/g, '{stream.name$1');
-      }
-      return addon;
-    });
-  }
-
-  // Sanitizza i template globali
-  if (config.settings) {
-    if (config.settings.defaultDescriptionTemplate) {
-      config.settings.defaultDescriptionTemplate = config.settings.defaultDescriptionTemplate
-        .replace(/\{title(::|\})/g, '{stream.title$1')
-        .replace(/\{name(::|\})/g, '{stream.name$1');
-    }
-    if (config.settings.defaultNameTemplate) {
-      config.settings.defaultNameTemplate = config.settings.defaultNameTemplate
-        .replace(/\{title(::|\})/g, '{stream.title$1')
-        .replace(/\{name(::|\})/g, '{stream.name$1');
-    }
-  }
-  
-  return config;
-}
-
-// ─── Validazione ──────────────────────────────────────────────────────────
-
+/**
+ * Validate a configuration object before saving.
+ * Checks template syntax, badge regex patterns, etc.
+ *
+ * @param {object} config
+ * @returns {{ valid: boolean, errors: string[] }}
+ */
 function validateConfig(config) {
   const errors = [];
 
-  // Valida badge globali
+  // Validate global badge patterns
   for (const badge of config.globalBadges || []) {
     if (!badge.pattern) {
       errors.push(`Badge "${badge.label}" is missing a pattern.`);
@@ -260,35 +122,39 @@ function validateConfig(config) {
     }
   }
 
-  // Valida configurazioni per-addon
+  // Validate per-addon configs
   for (const addonConf of config.addonConfigs || []) {
     const prefix = `Addon "${addonConf.name || addonConf.addonId}"`;
 
-    // Valida nameTemplate
-    if (addonConf.nameTemplate) {
-      const unknown = getUnknownVars(addonConf.nameTemplate);
-      if (unknown.length) {
-        errors.push(`${prefix} nameTemplate uses unknown variables: ${unknown.map(v => `{${v}}`).join(', ')}`);
+    // Validate templates
+    for (const field of ['nameTemplate', 'titleTemplate', 'descriptionTemplate']) {
+      const tpl = addonConf[field];
+      if (!tpl) continue;
+
+      const unknownVars = extractTemplateVars(tpl).filter(v => {
+        // Ignora i costrutti speciali ereditati
+        if (v.startsWith('badge:')) return false;
+        if (v.startsWith('if:')) return false;
+        
+        // Estrae il nome puro della variabile isolandolo da modificatori (es. 'stream.title::upper' -> 'stream.title')
+        const rawVar = v.split('::')[0].trim();
+        
+        // Gestione delle strutture con notazione a punto di AIOStreams (es: stream.title, metadata.genres)
+        if (rawVar.includes('.')) {
+          const root = rawVar.split('.')[0];
+          if (VALID_OBJECT_ROOTS.has(root)) return false; // È un oggetto AIOStreams valido
+        }
+
+        // Controllo finale sulla whitelist piatta o legacy
+        return !VALID_TEMPLATE_VARS.has(rawVar);
+      });
+
+      if (unknownVars.length) {
+        errors.push(`${prefix} ${field} uses unknown variables: ${unknownVars.map(v => `{${v}}`).join(', ')}`);
       }
     }
 
-    // Valida titleTemplate
-    if (addonConf.titleTemplate) {
-      const unknown = getUnknownVars(addonConf.titleTemplate);
-      if (unknown.length) {
-        errors.push(`${prefix} titleTemplate uses unknown variables: ${unknown.map(v => `{${v}}`).join(', ')}`);
-      }
-    }
-
-    // Valida descriptionTemplate
-    if (addonConf.descriptionTemplate) {
-      const unknown = getUnknownVars(addonConf.descriptionTemplate);
-      if (unknown.length) {
-        errors.push(`${prefix} descriptionTemplate uses unknown variables: ${unknown.map(v => `{${v}}`).join(', ')}`);
-      }
-    }
-
-    // Valida badge per-addon
+    // Validate addon-level badge patterns
     for (const badge of addonConf.badges || []) {
       if (!badge.pattern) {
         errors.push(`${prefix}: badge "${badge.label}" is missing a pattern.`);
@@ -310,28 +176,15 @@ function validateConfig(config) {
   return { valid: errors.length === 0, errors };
 }
 
-// ─── Default config ──────────────────────────────────────────────────────
+// ─── Helpers ───────────────────────────────────────────────────────────────
 
-function getDefaultConfig() {
-  return {
-    globalBadges: [
-      { pattern: '4k|2160p|uhd', label: '4K', priority: 1 },
-      { pattern: 'remux', label: 'REMUX', priority: 2 },
-      { pattern: 'dolby.?vision|\\bdv\\b', label: 'DV', priority: 3 },
-      { pattern: 'dolby.?atmos|atmos', label: 'Atmos', priority: 4 },
-      { pattern: 'hdr10\\+|hdr10plus', label: 'HDR10+', priority: 5 },
-      { pattern: 'hdr', label: 'HDR', priority: 6 },
-      { pattern: 'hevc|x265|h\\.265', label: 'HEVC', priority: 7 },
-      { pattern: '1080p', label: '1080p', priority: 8 },
-      { pattern: 'web.?dl|webdl', label: 'WEB-DL', priority: 9 },
-    ],
-    addonConfigs: [],
-    settings: {
-      mergeStreams: false,
-      globalNameTemplate: null,
-      globalDescriptionTemplate: null,
-    },
-  };
+/**
+ * Extract all {variable} names from a template string.
+ */
+function extractTemplateVars(template) {
+  if (typeof template !== 'string') return [];
+  const matches = template.matchAll(/\{([^}]+)\}/g);
+  return [...matches].map(m => m[1].trim());
 }
 
 module.exports = {
@@ -339,7 +192,4 @@ module.exports = {
   saveUserConfig,
   deleteUserConfig,
   validateConfig,
-  getDefaultConfig,
-  AIOSTREAMS_VARS,
-  VALID_OBJECT_ROOTS,
 };
