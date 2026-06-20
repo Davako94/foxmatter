@@ -37,6 +37,7 @@ const addonConfigSchema = z.object({
   types: z.array(z.string()).default([]),
   logo: z.string().nullable().optional(),
   nameTemplate: z.string().nullable().optional(),
+  imageUrlTemplate: z.string().nullable().optional(),
   titleTemplate: z.string().nullable().optional(),
   descriptionTemplate: z.string().nullable().optional(),
   badges: z.array(badgeSchema).default([]),
@@ -74,6 +75,9 @@ function sanitizeTemplates(config) {
   
   if (config.addonConfigs && Array.isArray(config.addonConfigs)) {
     config.addonConfigs = config.addonConfigs.map(addon => {
+      if (addon.imageUrlTemplate) {
+        addon.imageUrlTemplate = addon.imageUrlTemplate.replace(/\{title(::|\})/g, '{stream.title$1');
+      }
       if (addon.descriptionTemplate) {
         addon.descriptionTemplate = addon.descriptionTemplate.replace(/\{title(::|\})/g, '{stream.title$1');
       }
@@ -306,6 +310,7 @@ router.post('/sync-addons', asyncHandler(async (req, res) => {
       types: addon.types || [],
       logo: addon.logo,
       nameTemplate: null,
+      imageUrlTemplate: null,
       titleTemplate: null,
       descriptionTemplate: null,
       badges: [],

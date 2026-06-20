@@ -106,6 +106,11 @@
   .addon-card.open .chevron{transform:rotate(90deg)}
   .addon-body{padding:12px 14px 14px;border-top:1px solid var(--border);display:none}
   .addon-card.open .addon-body{display:block}
+  .addon-tabs{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px}
+  .addon-tab{padding:7px 10px;border-radius:10px;border:1px solid var(--border);background:var(--s2);color:var(--muted);font-size:.68rem;font-weight:800;cursor:pointer}
+  .addon-tab.active{border-color:var(--green);color:var(--green);background:rgba(0,255,136,.06)}
+  .addon-pane{display:none}
+  .addon-pane.active{display:block}
   
   .tmpl-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:8px}
   .tmpl-col-label{font-size:.6rem;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;display:flex;align-items:center;gap:4px;font-weight:700}
@@ -894,7 +899,9 @@ var VARS = [
   ['{stream.audioTags}','Tag audio'],['{stream.size::bytes}','Dimensione'],['{stream.seeders}','Seeders'],
   ['{stream.languages}','Lingue'],['{stream.languageEmojis}','Emoji'],['{stream.year}','Anno'],
   ['{stream.season}','Stagione'],['{stream.episode}','Episodio'],['{stream.releaseGroup}','Gruppo'],
-  ['{service.name}','Servizio'],['{service.shortName}','Sigla'],['{addon.name}','Addon'],
+  ['{service.name}','Servizio'],['{service.shortName}','Sigla'],['{service.cached}','Cache'],
+  ['{addon.name}','Addon'],['{addon.manifestUrl}','Manifest URL'],['{config.addonName}','Nome Foxmatter'],
+  ['{debug.json}','Debug JSON'],['{tools.newLine}','New line'],
 ];
 
 var prov='stremio', token=null, addons=[], config=null;
@@ -1051,6 +1058,7 @@ function renderAddonList(){
     var forceGlobalOnly = (globalName.trim() || globalDesc.trim());
     var nameVal=forceGlobalOnly ? '' : ((saved.titleTemplate && saved.titleTemplate !== globalName) ? saved.titleTemplate : '');
     var descVal=forceGlobalOnly ? '' : ((saved.descriptionTemplate && saved.descriptionTemplate !== globalDesc) ? saved.descriptionTemplate : '');
+    var imgVal=(saved.imageUrlTemplate || '');
     var enabled=saved.enabled!==false;
     var initials=(addon.name||'?').replace(/[^A-Za-z0-9]/g,'').slice(0,3).toUpperCase();
     var card=document.createElement('div');
@@ -1067,11 +1075,23 @@ function renderAddonList(){
       '<span class="toggle-lbl" id="tog-lbl-'+addon.id+'">'+(enabled?'Enabled':'Disabled')+'</span>'+
       '<span style="margin-left:auto;font-size:.6rem;color:var(--dim)">Leave empty → use Global</span>'+
       '</div>'+
+      '<div class="addon-tabs">'+
+      '<button class="addon-tab active" id="tab-'+addon.id+'-name" onclick="switchAddonTab(\''+addon.id+'\',\'name\')">Name</button>'+
+      '<button class="addon-tab" id="tab-'+addon.id+'-image" onclick="switchAddonTab(\''+addon.id+'\',\'image\')">Image URL</button>'+
+      '</div>'+
+      '<div class="addon-pane active" id="pane-'+addon.id+'-name">'+
       '<div class="tmpl-grid">'+
       '<div><div class="tmpl-col-label">Name template <span>(overrides global)</span></div>'+
       '<textarea class="tmpl" id="name-'+addon.id+'" oninput="updateAddonPreview(\''+addon.id+'\')" placeholder="Leave empty → use Global">'+nameVal+'</textarea></div>'+
       '<div><div class="tmpl-col-label">Description template <span>(overrides global)</span></div>'+
       '<textarea class="tmpl" id="desc-'+addon.id+'" oninput="updateAddonPreview(\''+addon.id+'\')" placeholder="Leave empty → use Global">'+descVal+'</textarea></div>'+
+      '</div>'+
+      '</div>'+
+      '<div class="addon-pane" id="pane-'+addon.id+'-image">'+
+      '<div class="tmpl-grid" style="grid-template-columns:1fr">'+
+      '<div><div class="tmpl-col-label">Image URL template <span>(addon logo / url_image)</span></div>'+
+      '<textarea class="tmpl" id="img-'+addon.id+'" oninput="updateAddonPreview(\''+addon.id+'\')" placeholder="Leave empty → use original addon image">'+imgVal+'</textarea></div>'+
+      '</div>'+
       '</div>'+
       '<div class="snip-section"><div class="snip-label">Name snippets</div><div class="snip-row" id="sn-'+addon.id+'-name"></div></div>'+
       '<div class="snip-section" style="margin-top:4px"><div class="snip-label">Description snippets</div><div class="snip-row" id="sn-'+addon.id+'-desc"></div></div>'+
@@ -1121,6 +1141,16 @@ function toggleSection(id){
 function toggleCard(id){ document.getElementById('card-'+id).classList.toggle('open'); }
 function flipTog(id){ var t=document.getElementById('tog-'+id); t.classList.toggle('on'); var on=t.classList.contains('on'); document.getElementById('tog-lbl-'+id).textContent=on?'Enabled':'Disabled'; document.getElementById('ameta-'+id).textContent=on?'enabled':'disabled'; }
 function toggleVars(id){ var p=document.getElementById('vars-'+id); p.classList.toggle('open'); document.getElementById('varr-'+id).textContent=p.classList.contains('open')?'▼':'▶'; }
+function switchAddonTab(id, tab){
+  var tabs=['name','image'];
+  for(var i=0;i<tabs.length;i++){
+    var active=tabs[i]===tab;
+    var tabEl=document.getElementById('tab-'+id+'-'+tabs[i]);
+    var paneEl=document.getElementById('pane-'+id+'-'+tabs[i]);
+    if(tabEl) tabEl.classList.toggle('active', active);
+    if(paneEl) paneEl.classList.toggle('active', active);
+  }
+}
 function fillSnippets(cid,snippets,tid,cb){ var c=document.getElementById(cid); if(!c)return; for(var i=0;i<snippets.length;i++){ var s=snippets[i]; var el=document.createElement('span');el.className='snip';el.textContent=s.l; el.onclick=function(snip){ return function(){ insertSnippet(tid,snip.v); if(cb)cb(); }; }(s); c.appendChild(el); } }
 function insertSnippet(tid,val){ var el=document.getElementById(tid); if(!el)return; var s=el.selectionStart,e2=el.selectionEnd; el.value=el.value.slice(0,s)+val+el.value.slice(e2); el.selectionStart=el.selectionEnd=s+val.length; el.focus(); el.dispatchEvent(new Event('input')); }
 function updateAddonPreview(id){
@@ -1179,10 +1209,12 @@ async function saveConfig(){
       var addon=addons[i];
       var tog=document.getElementById('tog-'+addon.id);
       var enabled=tog?tog.classList.contains('on'):true;
-      var perNameRaw=document.getElementById('name-'+addon.id)?.value||'';
-      var perDescRaw=document.getElementById('desc-'+addon.id)?.value||'';
-      var finalName=perNameRaw.trim() ? perNameRaw : null;
-      var finalDesc=perDescRaw.trim() ? perDescRaw : null;
+    var perNameRaw=document.getElementById('name-'+addon.id)?.value||'';
+    var perDescRaw=document.getElementById('desc-'+addon.id)?.value||'';
+    var perImgRaw=document.getElementById('img-'+addon.id)?.value||'';
+    var finalName=perNameRaw.trim() ? perNameRaw : null;
+    var finalDesc=perDescRaw.trim() ? perDescRaw : null;
+    var finalImg=perImgRaw.trim() ? perImgRaw : null;
       var jsonEl=document.getElementById('file-'+addon.id);
       var jsonStr=jsonEl?.getAttribute('data-json');
       var badges=[];
@@ -1192,7 +1224,7 @@ async function saveConfig(){
         name:addon.name, transportUrl:addon.transportUrl||'https://localhost',
         enabled:enabled, idPrefixes:addon.idPrefixes||[], types:addon.types||['movie','series'],
         logo:addon.logo||null, nameTemplate:null,
-        titleTemplate:finalName, descriptionTemplate:finalDesc, badges:badges
+        imageUrlTemplate:finalImg, titleTemplate:finalName, descriptionTemplate:finalDesc, badges:badges
       });
     }
   }

@@ -113,6 +113,7 @@ router.post('/sync', asyncHandler(async (req, res) => {
       types:               addon.types,
       logo:                addon.logo,
       nameTemplate:        null,
+      imageUrlTemplate:    null,
       titleTemplate:       null,
       descriptionTemplate: null,
       badges:              [],
@@ -214,7 +215,7 @@ router.post('/add', asyncHandler(async (req, res) => {
     addonId: addon.id, slug: addon.slug, name: addon.name,
     transportUrl: addon.transportUrl, enabled: true,
     idPrefixes: addon.idPrefixes, types: addon.types, logo: addon.logo,
-    nameTemplate: null, titleTemplate: null, descriptionTemplate: null, badges: [],
+    nameTemplate: null, imageUrlTemplate: null, titleTemplate: null, descriptionTemplate: null, badges: [],
   });
 
   await saveUserConfig(req.user.userId, config);

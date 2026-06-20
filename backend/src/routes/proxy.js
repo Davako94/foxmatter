@@ -59,6 +59,23 @@ async function getCachedManifest(transportUrl) {
   return manifest;
 }
 
+function buildProxyManifest(userId, addonSlug, addonConfig, orig = {}, baseUrl = BASE_URL) {
+  const addonName = addonConfig.name || addonSlug;
+  return {
+    id: `foxmatter.proxy.${userId}.${addonSlug}`,
+    name: `${addonName} [Foxmatter]`,
+    version: orig.version || '1.0.0',
+    description: `Foxmatter proxy for ${addonName}.`,
+    logo: addonConfig.logo || orig.logo || orig.icon || orig.background || null,
+    resources: ['stream'],
+    types: addonConfig.types?.length ? addonConfig.types : (orig.types || ['movie', 'series']),
+    idPrefixes: addonConfig.idPrefixes?.length ? addonConfig.idPrefixes : (orig.idPrefixes || ['tt']),
+    catalogs: [],
+    behaviorHints: { configurable: false, configurationRequired: false },
+    transportUrl: `${baseUrl}/proxy/${userId}/${addonSlug}/manifest.json`,
+  };
+}
+
 function applyTemplates(streams, addonConfig) {
   const globalTemplate = addonConfig?.globalTemplate || {};
   const titleTemplate = addonConfig?.titleTemplate || globalTemplate.titleTemplate;
@@ -131,18 +148,7 @@ router.get('/:userId/:addonSlug/manifest.json', asyncHandler(async (req, res) =>
   res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
   res.setHeader('Pragma', 'no-cache');
   res.setHeader('Expires', '0');
-  res.json({
-    id:          `foxmatter.proxy.${userId}.${addonSlug}`,
-    name:        `${addonConfig.name || addonSlug} [Foxmatter]`,
-    version:     orig.version || '1.0.0',
-    description: `Foxmatter proxy for ${addonConfig.name || addonSlug}.`,
-    logo:        addonConfig.logo || orig.logo || null,
-    resources:   orig.resources  || ['stream'],
-    types:       addonConfig.types?.length      ? addonConfig.types      : (orig.types      || ['movie', 'series']),
-    idPrefixes:  addonConfig.idPrefixes?.length ? addonConfig.idPrefixes : (orig.idPrefixes || ['tt']),
-    catalogs:    [],
-    behaviorHints: { configurable: false, configurationRequired: false },
-  });
+  res.json(buildProxyManifest(userId, addonSlug, addonConfig, orig));
 }));
 
 // ── /proxy/:userId/:addonSlug/stream/:type/:id.json ───────────────────────
@@ -185,11 +191,12 @@ router.get('/:userId/manifest.json', asyncHandler(async (req, res) => {
   const types    = new Set(['movie', 'series']);
   const orderedAddons = [...(config.addonConfigs || [])].sort((a, b) => {
     const order = config?.settings?.addonOrder || [];
-    const ai = order.indexOf(a.slug || a.addonId || a.id);
-    const bi = order.indexOf(b.slug || b.addonId || b.id);
+    const ai = order.findIndex(v => String(v).toLowerCase() === String(a.slug || a.addonId || a.id || '').toLowerCase());
+    const bi = order.findIndex(v => String(v).toLowerCase() === String(b.slug || b.addonId || b.id || '').toLowerCase());
     const safeAi = ai === -1 ? Number.MAX_SAFE_INTEGER : ai;
     const safeBi = bi === -1 ? Number.MAX_SAFE_INTEGER : bi;
-    return safeAi - safeBi;
+    if (safeAi !== safeBi) return safeAi - safeBi;
+    return String(a.name || a.slug || '').localeCompare(String(b.name || b.slug || ''));
   });
 
   for (const a of orderedAddons) {
@@ -202,15 +209,15 @@ router.get('/:userId/manifest.json', asyncHandler(async (req, res) => {
   res.setHeader('Pragma', 'no-cache');
   res.setHeader('Expires', '0');
   res.json({
-    id:          `foxmatter.master.${userId}`,
-    name:        `Foxmatter [${user?.name || 'User'}]`,
-    version:     '1.0.0',
+    id: `foxmatter.master.${userId}`,
+    name: `Foxmatter [${user?.name || 'User'}]`,
+    version: '1.0.0',
     description: 'All your addons, formatted. Powered by Foxmatter.',
-    logo:        `${BASE_URL}/logo.png`,
-    resources:   ['stream'],
-    types:       [...types],
-    idPrefixes:  [...prefixes],
-    catalogs:    [],
+    logo: `${BASE_URL}/logo.png`,
+    resources: ['stream'],
+    types: [...types],
+    idPrefixes: [...prefixes],
+    catalogs: [],
     behaviorHints: { configurable: false },
   });
 }));
